@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>眾旺成本查詢</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg: #f5f5f5;
+    --surface: #ffffff;
+    --surface2: #f0f0f0;
+    --border: #e0e0e0;
+    --accent: #c97a1e;
+    --accent2: #a85f0f;
+    --text: #1a1a1a;
+    --text2: #666;
+    --text3: #999;
+    --green: #2e7d56;
+    --red: #c0392b;
+    --yellow: #b8860b;
+    --tag-bg: #fff3e0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .logo {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  .logo span { color: var(--text2); font-weight: 300; font-size: 13px; margin-left: 6px; }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 10px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+  }
+  input[type="search"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px 10px 38px;
+    font-size: 16px;
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  input[type="search"]:focus { border-color: var(--accent); }
+  input[type="search"]::placeholder { color: var(--text3); }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 6px;
+  }
+  .tab {
+    flex: 1;
+    padding: 7px 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    text-align: center;
+    font-family: inherit;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0f0f0f;
+    font-weight: 700;
+  }
+
+  /* Store filter */
+  .store-filter {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .store-filter::-webkit-scrollbar { display: none; }
+  .store-btn {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .store-btn.active {
+    background: var(--tag-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Count bar */
+  .count-bar {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* List */
+  .list { padding: 0 0 80px; }
+
+  .group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 10px;
+    cursor: pointer;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+  }
+  .group-header:active { opacity: 0.7; }
+  .group-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+  .group-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .group-count {
+    font-size: 12px;
+    color: var(--text3);
+  }
+  .group-chevron {
+    font-size: 11px;
+    color: var(--text3);
+    transition: transform 0.2s;
+  }
+  .group-chevron.collapsed { transform: rotate(-90deg); }
+  .group-items { }
+  .group-items.collapsed { display: none; }
+
+  .item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+    gap: 10px;
+    active: background: var(--surface);
+  }
+  .item:active { background: var(--surface); }
+
+  .item-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .item-dot.prod { background: var(--accent); }
+  .item-dot.mat  { background: var(--green); }
+  .item-dot.semi { background: #7b68ee; }
+  .item-dot.pkg  { background: #e05757; }
+
+  .item-main { flex: 1; min-width: 0; }
+  .item-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .item-sub {
+    font-size: 12px;
+    color: var(--text2);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .item-tag {
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .item-right { text-align: right; flex-shrink: 0; }
+  .item-cost {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .item-cost-label { font-size: 10px; color: var(--text3); }
+  .cost-pct {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 3px;
+    display: inline-block;
+  }
+  .pct-good { background: #e8f5ee; color: var(--green); }
+  .pct-mid { background: #fef9e7; color: var(--yellow); }
+  .pct-bad { background: #fdecea; color: var(--red); }
+
+  /* Detail Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .modal {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .modal-overlay.show .modal { transform: translateY(0); }
+
+  .modal-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 12px auto 0;
+  }
+  .modal-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .modal-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .modal-tag {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .modal-body { padding: 16px 20px; }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid var(--border);
+  }
+  .stat-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .stat-value { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value small { font-size: 13px; font-weight: 400; color: var(--text2); }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text3);
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .spec-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .spec-row:last-child { border-bottom: none; }
+  .spec-label { color: var(--text2); }
+  .spec-value { color: var(--text); font-weight: 500; }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 15px; }
+</style>
+</head>
+<script src="data.js"></script>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">眾旺｜麻媽家・涼三伯 <span>成本查詢</span></div>
+    <div id="updateDate" style="font-size:11px;color:var(--text3)"></div>
+  </div>
+  <div class="search-wrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="search" id="searchInput" placeholder="關鍵字搜尋…" autocomplete="off">
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="products">產品 <span id="prodCount"></span></button>
+    <button class="tab" data-tab="materials">食材 <span id="matCount"></span></button>
+    <button class="tab" data-tab="packaging">包材 <span id="pkgCount"></span></button>
+    <button class="tab" data-tab="semis">半成品 <span id="semiCount"></span></button>
+  </div>
+</div>
+
+<div class="store-filter" id="storeFilter"></div>
+<div class="count-bar" id="countBar"></div>
+<div class="list" id="listContainer"></div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+// 資料載入自 data.js
+
+// 資料載入自 data.js
+
+const ICONS = { mat: '🥬', semi: '🍲', prod: '🍱', pkg: '📦' };
+const STORE_COLORS = { '麻媽家': '#c97a1e', '涼三伯': '#2e7d56', 'ALL': '#999' };
+
+let currentTab = 'products';
+let currentStore = 'ALL';
+let searchQuery = '';
+
+function getPctClass(pct) {
+  if (pct <= 30) return 'pct-good';
+  if (pct <= 40) return 'pct-mid';
+  return 'pct-bad';
+}
+
+function formatCost(v) {
+  if (v >= 1) return v.toFixed(2);
+  if (v >= 0.01) return v.toFixed(4);
+  return v.toFixed(6);
+}
+
+function getStores() {
+  if (currentTab === 'products') {
+    const stores = [...new Set(PRODUCTS.map(p => p.store))];
+    return ['ALL', ...stores];
+  }
+  if (currentTab === 'materials') {
+    const stores = [...new Set(MATERIALS.map(m => m.store))];
+    return ['ALL', ...stores.filter(s => s !== 'ALL')];
+  }
+  if (currentTab === 'packaging') {
+    const stores = [...new Set(PACKAGING.map(p => p.store))];
+    return ['ALL', ...stores.filter(s => s !== 'ALL')];
+  }
+  return ['ALL'];
+}
+
+function filterData() {
+  const q = searchQuery.toLowerCase();
+  if (currentTab === 'products') {
+    return PRODUCTS.filter(p => {
+      const matchStore = currentStore === 'ALL' || p.store === currentStore;
+      const matchQ = !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
+      return matchStore && matchQ;
+    });
+  }
+  if (currentTab === 'materials') {
+    return MATERIALS.filter(m => {
+      const matchStore = currentStore === 'ALL' || m.store === currentStore || m.store === 'ALL';
+      const matchQ = !q || m.name.toLowerCase().includes(q) || m.category.toLowerCase().includes(q) || m.id.toLowerCase().includes(q);
+      return matchStore && matchQ;
+    });
+  }
+  if (currentTab === 'packaging') {
+    return PACKAGING.filter(p => {
+      const matchStore = currentStore === 'ALL' || p.store === currentStore || p.store === 'ALL';
+      const matchQ = !q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.spec.toLowerCase().includes(q);
+      return matchStore && matchQ;
+    });
+  }
+  if (currentTab === 'semis') {
+    return SEMIS.filter(s => {
+      const matchQ = !q || s.name.toLowerCase().includes(q);
+      return matchQ;
+    });
+  }
+  return [];
+}
+
+function groupBy(arr, key) {
+  const groups = {};
+  arr.forEach(item => {
+    const k = item[key] || '其他';
+    if (!groups[k]) groups[k] = [];
+    groups[k].push(item);
+  });
+  return groups;
+}
+
+function renderStoreFilter() {
+  const sf = document.getElementById('storeFilter');
+  const stores = getStores();
+  sf.innerHTML = stores.map(s => `
+    <button class="store-btn ${currentStore === s ? 'active' : ''}" onclick="setStore('${s}')">
+      ${s === 'ALL' ? '全部' : s}
+    </button>
+  `).join('');
+  sf.style.display = (currentTab === 'semis') ? 'none' : 'flex';
+}
+
+function setStore(s) {
+  currentStore = s;
+  renderStoreFilter();
+  renderList();
+}
+
+function renderList() {
+  const data = filterData();
+  const container = document.getElementById('listContainer');
+  document.getElementById('countBar').textContent = `顯示 ${data.length} 筆`;
+
+  if (data.length === 0) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">找不到相關項目</div></div>`;
+    return;
+  }
+
+  let html = '';
+
+  const collapsed = window._collapsed || {};
+  window._collapsed = collapsed;
+
+  function makeGroup(catKey, catLabel, dotClass, itemsHtml, count) {
+    const isOpen = collapsed[catKey] !== true;
+    return `<div>
+      <div class="group-header" onclick="toggleGroup('${catKey}')">
+        <span class="group-title">${catLabel}</span>
+        <span class="group-meta">
+          <span class="group-count">${count} 項</span>
+          <span class="group-chevron${isOpen ? '' : ' collapsed'}">▼</span>
+        </span>
+      </div>
+      <div class="group-items${isOpen ? '' : ' collapsed'}" id="grp-${catKey}">${itemsHtml}</div>
+    </div>`;
+  }
+
+  if (currentTab === 'products') {
+    const groups = groupBy(data, 'category');
+    for (const [cat, items] of Object.entries(groups)) {
+      let inner = '';
+      items.forEach(p => {
+        inner += `<div class="item" onclick="showProduct(${PRODUCTS.indexOf(p)})">
+          <div class="item-dot prod"></div>
+          <div class="item-main">
+            <div class="item-name">${p.name}</div>
+            <div class="item-sub">
+              <span class="item-tag" style="color:${STORE_COLORS[p.store]||'#999'}">${p.store}</span>
+              <span>售價 $${p.price}</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-cost">$${p.cost}</div>
+            <div class="cost-pct ${getPctClass(p.cost_pct)}">${p.cost_pct}%</div>
+          </div>
+        </div>`;
+      });
+      html += makeGroup('prod_'+cat, cat, 'prod', inner, items.length);
+    }
+  } else if (currentTab === 'materials') {
+    const groups = groupBy(data, 'category');
+    for (const [cat, items] of Object.entries(groups)) {
+      let inner = '';
+      items.forEach(m => {
+        const idx = MATERIALS.findIndex(x => x.id === m.id);
+        inner += `<div class="item" onclick="showMaterial(${idx})">
+          <div class="item-dot mat"></div>
+          <div class="item-main">
+            <div class="item-name">${m.name}</div>
+            <div class="item-sub">
+              <span class="item-tag">${m.id}</span>
+              <span>${m.spec}</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-cost">${formatCost(m.unit_cost)}</div>
+            <div class="item-cost-label">元/${m.unit}</div>
+          </div>
+        </div>`;
+      });
+      html += makeGroup('mat_'+cat, cat, 'mat', inner, items.length);
+    }
+  } else if (currentTab === 'packaging') {
+    let inner = '';
+    data.forEach(p => {
+      const idx = PACKAGING.findIndex(x => x.id === p.id);
+      inner += `<div class="item" onclick="showPackaging(${idx})">
+        <div class="item-dot pkg"></div>
+        <div class="item-main">
+          <div class="item-name">${p.name}</div>
+          <div class="item-sub">
+            <span class="item-tag">${p.id}</span>
+            <span>${p.spec}</span>
+          </div>
+        </div>
+        <div class="item-right">
+          <div class="item-cost">${formatCost(p.unit_cost)}</div>
+          <div class="item-cost-label">元/個</div>
+        </div>
+      </div>`;
+    });
+    html += makeGroup('pkg_all', '包材', 'pkg', inner, data.length);
+  } else {
+    let inner = '';
+    data.forEach(s => {
+      const idx = SEMIS.findIndex(x => x.name === s.name);
+      inner += `<div class="item" onclick="showSemi(${idx})">
+        <div class="item-dot semi"></div>
+        <div class="item-main">
+          <div class="item-name">${s.name}</div>
+          <div class="item-sub">
+            <span>產出 ${s.yield_g >= 1000 ? (s.yield_g/1000).toFixed(1)+'kg' : s.yield_g+'g'}</span>
+            ${s.note ? `<span class="item-tag">${s.note.substring(0,8)}</span>` : ''}
+          </div>
+        </div>
+        <div class="item-right">
+          <div class="item-cost">${formatCost(s.unit_cost)}</div>
+          <div class="item-cost-label">元/g</div>
+        </div>
+      </div>`;
+    });
+    html += makeGroup('semi_all', '半成品', 'semi', inner, data.length);
+  }
+
+  container.innerHTML = html;
+}
+
+function toggleGroup(key) {
+  const w = window._collapsed || {};
+  w[key] = !w[key];
+  window._collapsed = w;
+  // toggle DOM directly without full re-render
+  const grp = document.getElementById('grp-' + key);
+  const header = grp ? grp.previousElementSibling : null;
+  if (grp) grp.classList.toggle('collapsed', w[key]);
+  if (header) {
+    const chev = header.querySelector('.group-chevron');
+    if (chev) chev.classList.toggle('collapsed', w[key]);
+  }
+}
+
+function showProduct(idx) {
+  const p = PRODUCTS[idx];
+  const margin = p.price - p.cost;
+  const pctClass = getPctClass(p.cost_pct);
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">${p.name}</div>
+      <div class="modal-meta">
+        <span class="modal-tag" style="color:${STORE_COLORS[p.store]||'#888'}">${p.store}</span>
+        <span class="modal-tag">${p.category}</span>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">單份成本</div>
+          <div class="stat-value">$${p.cost}<small> 元</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">成本率</div>
+          <div class="stat-value ${pctClass === 'pct-good' ? 'green' : pctClass === 'pct-bad' ? 'red' : ''}">${p.cost_pct}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">售價</div>
+          <div class="stat-value">$${p.price}<small> 元</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">毛利（食材）</div>
+          <div class="stat-value green">$${margin.toFixed(2)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+  showModal();
+}
+
+function showMaterial(idx) {
+  const m = MATERIALS[idx];
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">${m.name}</div>
+      <div class="modal-meta">
+        <span class="modal-tag">${m.id}</span>
+        <span class="modal-tag">${m.category}</span>
+        <span class="modal-tag" style="color:${STORE_COLORS[m.store]||'#888'}">${m.store}</span>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">單位成本</div>
+          <div class="stat-value">$${formatCost(m.unit_cost)}<small>/${m.unit}</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">進貨單價</div>
+          <div class="stat-value">$${m.price}</div>
+        </div>
+      </div>
+      <div class="section-title">規格資訊</div>
+      <div class="spec-row"><span class="spec-label">包裝規格</span><span class="spec-value">${m.spec}</span></div>
+      <div class="spec-row"><span class="spec-label">換算單位</span><span class="spec-value">${m.unit}</span></div>
+      <div class="spec-row"><span class="spec-label">門店</span><span class="spec-value">${m.store}</span></div>
+    </div>
+  `;
+  showModal();
+}
+
+function showSemi(idx) {
+  const s = SEMIS[idx];
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">${s.name}</div>
+      <div class="modal-meta">
+        <span class="modal-tag">半成品</span>
+        ${s.note ? `<span class="modal-tag">${s.note}</span>` : ''}
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">單位成本</div>
+          <div class="stat-value">$${formatCost(s.unit_cost)}<small>/g</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">總材料成本</div>
+          <div class="stat-value">$${s.total_cost}</div>
+        </div>
+      </div>
+      <div class="section-title">批次資訊</div>
+      <div class="spec-row"><span class="spec-label">產出量</span><span class="spec-value">${s.yield_g}g</span></div>
+      <div class="spec-row"><span class="spec-label">換算</span><span class="spec-value">${(s.yield_g/1000).toFixed(2)} kg</span></div>
+      ${s.note ? `<div class="spec-row"><span class="spec-label">備註</span><span class="spec-value">${s.note}</span></div>` : ''}
+    </div>
+  `;
+  showModal();
+}
+
+function showPackaging(idx) {
+  const p = PACKAGING[idx];
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">${p.name}</div>
+      <div class="modal-meta">
+        <span class="modal-tag">${p.id}</span>
+        <span class="modal-tag" style="color:${STORE_COLORS[p.store]||'#999'}">${p.store}</span>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">單位成本</div>
+          <div class="stat-value">$${formatCost(p.unit_cost)}<small>/個</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">進貨單價</div>
+          <div class="stat-value">$${p.price}</div>
+        </div>
+      </div>
+      <div class="section-title">規格資訊</div>
+      <div class="spec-row"><span class="spec-label">包裝規格</span><span class="spec-value">${p.spec}</span></div>
+      <div class="spec-row"><span class="spec-label">每箱數量</span><span class="spec-value">${p.qty} 個</span></div>
+      <div class="spec-row"><span class="spec-label">門店</span><span class="spec-value">${p.store}</span></div>
+    </div>
+  `;
+  showModal();
+}
+
+function showModal() {
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+// Init
+document.getElementById('prodCount').textContent = PRODUCTS.length;
+document.getElementById('matCount').textContent = MATERIALS.length;
+document.getElementById('pkgCount').textContent = PACKAGING.length;
+document.getElementById('semiCount').textContent = SEMIS.length;
+document.getElementById('updateDate').textContent = 'v19';
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    currentTab = t.dataset.tab;
+    currentStore = 'ALL';
+    window._collapsed = {};
+    renderStoreFilter();
+    renderList();
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  if (searchQuery) window._collapsed = {};  // expand all when searching
+  renderList();
+});
+
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('show');
+  }
+});
+
+renderStoreFilter();
+renderList();
+</script>
+</body>
+</html>
