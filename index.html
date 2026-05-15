@@ -23,6 +23,84 @@
     --tag-bg: #fff3e0;
   }
 
+
+  /* Login Screen */
+  .login-screen {
+    position: fixed;
+    inset: 0;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 24px;
+  }
+  .login-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+  .login-logo {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #c97a1e;
+  }
+  .login-sub {
+    text-align: center;
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 28px;
+  }
+  .login-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .login-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #fafafa;
+    margin-bottom: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .login-input:focus { border-color: #c97a1e; background: #fff; }
+  .login-btn {
+    width: 100%;
+    padding: 13px;
+    background: #c97a1e;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.15s;
+  }
+  .login-btn:active { background: #a85f0f; }
+  .login-error {
+    color: #c0392b;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 12px;
+    min-height: 20px;
+  }
+  .app-hidden { display: none; }
+
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
@@ -352,6 +430,20 @@
 <script src="data.js"></script>
 <body>
 
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">眾旺餐飲</div>
+    <div class="login-sub">成本查詢系統</div>
+    <label class="login-label">帳號</label>
+    <input class="login-input" id="loginUser" type="text" placeholder="請輸入帳號" autocomplete="username">
+    <label class="login-label">密碼</label>
+    <input class="login-input" id="loginPass" type="password" placeholder="請輸入密碼" autocomplete="current-password">
+    <button class="login-btn" onclick="doLogin()">登入</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div id="appRoot" class="app-hidden">
 <div class="header">
   <div class="header-top">
     <div class="logo">眾旺｜麻媽家・涼三伯 <span>成本查詢</span></div>
@@ -372,6 +464,8 @@
 <div class="store-filter" id="storeFilter"></div>
 <div class="count-bar" id="countBar"></div>
 <div class="list" id="listContainer"></div>
+
+</div><!-- /appRoot -->
 
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modal">
@@ -774,8 +868,43 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
   }
 });
 
-renderStoreFilter();
-renderList();
+
+// ── 帳密設定 ──────────────────────────────
+const USERS = {
+  'rene':  'rene888',
+  'jerry': 'jerry888'
+};
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim().toLowerCase();
+  const p = document.getElementById('loginPass').value;
+  if (USERS[u] && USERS[u] === p) {
+    sessionStorage.setItem('cq_auth', u);
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appRoot').classList.remove('app-hidden');
+    renderStoreFilter();
+    renderList();
+  } else {
+    document.getElementById('loginError').textContent = '帳號或密碼錯誤';
+    document.getElementById('loginPass').value = '';
+  }
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
+});
+
+// Check session
+if (sessionStorage.getItem('cq_auth')) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').classList.remove('app-hidden');
+} else {
+  // Don't render until logged in
+}
+// ─────────────────────────────────────────
+
+if (sessionStorage.getItem('cq_auth')) { renderStoreFilter(); renderList(); }
 </script>
 </body>
 </html>
