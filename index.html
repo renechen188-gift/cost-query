@@ -108,7 +108,7 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    max-width: 480px;
+    max-width: 960px;
     margin: 0 auto;
   }
 
@@ -571,14 +571,14 @@ function formatCost(v) {
   return v.toFixed(6);
 }
 
-function getStores() {
+function getFilters() {
   if (currentTab === 'products') {
-    const stores = [...new Set(PRODUCTS.map(p => p.store))];
-    return ['ALL', ...stores];
+    const cats = [...new Set(PRODUCTS.map(p => p.category))];
+    return ['ALL', ...cats];
   }
   if (currentTab === 'materials') {
-    const stores = [...new Set(MATERIALS.map(m => m.store))];
-    return ['ALL', ...stores.filter(s => s !== 'ALL')];
+    const cats = [...new Set(MATERIALS.map(m => m.category))];
+    return ['ALL', ...cats];
   }
   if (currentTab === 'packaging') {
     const stores = [...new Set(PACKAGING.map(p => p.store))];
@@ -591,16 +591,16 @@ function filterData() {
   const q = searchQuery.toLowerCase();
   if (currentTab === 'products') {
     return PRODUCTS.filter(p => {
-      const matchStore = currentStore === 'ALL' || p.store === currentStore;
+      const matchCat = currentStore === 'ALL' || p.category === currentStore;
       const matchQ = !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
-      return matchStore && matchQ;
+      return matchCat && matchQ;
     });
   }
   if (currentTab === 'materials') {
     return MATERIALS.filter(m => {
-      const matchStore = currentStore === 'ALL' || m.store === currentStore || m.store === 'ALL';
+      const matchCat = currentStore === 'ALL' || m.category === currentStore;
       const matchQ = !q || m.name.toLowerCase().includes(q) || m.category.toLowerCase().includes(q) || m.id.toLowerCase().includes(q);
-      return matchStore && matchQ;
+      return matchCat && matchQ;
     });
   }
   if (currentTab === 'packaging') {
@@ -631,8 +631,8 @@ function groupBy(arr, key) {
 
 function renderStoreFilter() {
   const sf = document.getElementById('storeFilter');
-  const stores = getStores();
-  sf.innerHTML = stores.map(s => `
+  const filters = getFilters();
+  sf.innerHTML = filters.map(s => `
     <button class="store-btn ${currentStore === s ? 'active' : ''}" onclick="setStore('${s}')">
       ${s === 'ALL' ? '全部' : s}
     </button>
@@ -1173,7 +1173,7 @@ function closeModal() {
 }
 
 // Init
-document.getElementById('updateDate').textContent = 'v19';
+document.getElementById('updateDate').textContent = 'v20';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
