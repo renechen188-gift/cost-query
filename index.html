@@ -893,10 +893,19 @@ async function deleteItem(type, idx) {
   renderList();
 }
 
-function showProduct(idx) {
+async function showProduct(idx) {
   const p = PRODUCTS[idx];
   const margin = p.price - p.cost;
   const pctClass = getPctClass(p.cost_pct);
+  const {data: bom} = await db.from('cost_bom').select('*').eq('product', p.name).order('type').order('cost', {ascending: false});
+  const bomRows = (bom||[]).map(b => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b">
+      <div style="flex:1">
+        <span style="font-size:13px">${b.ingredient}</span>
+        <span style="font-size:11px;color:#64748b;margin-left:6px">${b.qty}${b.unit}</span>
+      </div>
+      <span style="font-size:13px;font-weight:600;color:#d97706">$${Number(b.cost).toFixed(2)}</span>
+    </div>`).join('');
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-header">
       <div class="modal-title">${p.name}</div>
@@ -924,6 +933,7 @@ function showProduct(idx) {
           <div class="stat-value green">$${margin.toFixed(2)}</div>
         </div>
       </div>
+      ${bomRows.length ? `<div class="section-title" style="margin-top:12px">📋 BOM 配方明細</div>${bomRows}` : ''}
       ${adminBtns('product', idx)}
     </div>
   `;
@@ -962,8 +972,17 @@ function showMaterial(idx) {
   showModal();
 }
 
-function showSemi(idx) {
+async function showSemi(idx) {
   const s = SEMIS[idx];
+  const {data: bom} = await db.from('cost_semi_bom').select('*').eq('semi_name', s.name).order('cost', {ascending: false});
+  const bomRows = (bom||[]).map(b => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b">
+      <div style="flex:1">
+        <span style="font-size:13px">${b.ingredient}</span>
+        <span style="font-size:11px;color:#64748b;margin-left:6px">${Number(b.qty).toFixed(0)}g</span>
+      </div>
+      <span style="font-size:13px;font-weight:600;color:#d97706">$${Number(b.cost).toFixed(2)}</span>
+    </div>`).join('');
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-header">
       <div class="modal-title">${s.name}</div>
@@ -987,6 +1006,7 @@ function showSemi(idx) {
       <div class="spec-row"><span class="spec-label">產出量</span><span class="spec-value">${s.yield_g}g</span></div>
       <div class="spec-row"><span class="spec-label">換算</span><span class="spec-value">${(s.yield_g/1000).toFixed(2)} kg</span></div>
       ${s.note ? `<div class="spec-row"><span class="spec-label">備註</span><span class="spec-value">${s.note}</span></div>` : ''}
+      ${bomRows.length ? `<div class="section-title" style="margin-top:8px">📋 配方組成</div>${bomRows}` : ''}
       ${adminBtns('semi', idx)}
     </div>
   `;
