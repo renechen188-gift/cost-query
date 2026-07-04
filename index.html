@@ -950,8 +950,15 @@ async function delBomRow(id, table) {
   const t = table === 'semi' ? 'cost_semi_bom' : 'cost_bom';
   const {error} = await db.from(t).delete().eq('id', id);
   if (error) { alert('刪除失敗: ' + error.message); return; }
-  if (table === 'semi' && _showSemiIdx !== null) showSemi(_showSemiIdx);
-  else if (_showProductIdx !== null) showProduct(_showProductIdx);
+  if (table === 'semi' && _showSemiIdx !== null) {
+    await recalcSemi(SEMIS[_showSemiIdx].name);
+    await loadData();
+    showSemi(_showSemiIdx);
+  } else if (_showProductIdx !== null) {
+    await recalcProduct(PRODUCTS[_showProductIdx].name);
+    await loadData();
+    showProduct(_showProductIdx);
+  }
 }
 
 async function addBomRow(productName) {
@@ -964,6 +971,8 @@ async function addBomRow(productName) {
   if (!cost || isNaN(cost)) return;
   const {error} = await db.from('cost_bom').insert({product: productName, ingredient, qty, unit, cost, type: 'material'});
   if (error) { alert('新增失敗: ' + error.message); return; }
+  await recalcProduct(productName);
+  await loadData();
   if (_showProductIdx !== null) showProduct(_showProductIdx);
 }
 
@@ -992,8 +1001,45 @@ async function saveBomEdit(id, table) {
   if (table !== 'semi') data.unit = document.getElementById('be_unit_'+id).value.trim() || 'g';
   const {error} = await db.from(t).update(data).eq('id', id);
   if (error) { alert('儲存失敗: ' + error.message); return; }
-  if (table === 'semi') showSemi(_showSemiIdx);
-  else showProduct(_showProductIdx);
+  if (table === 'semi') {
+    await recalcSemi(SEMIS[_showSemiIdx].name);
+    await loadData();
+    showSemi(_showSemiIdx);
+  } else {
+    await recalcProduct(PRODUCTS[_showProductIdx].name);
+    await loadData();
+    showProduct(_showProductIdx);
+  }
+}
+
+async function recalcSemi(semiName) {
+  const {data: rows} = await db.from('cost_semi_bom').select('cost').eq('semi_name', semiName);
+  const totalCost = (rows||[]).reduce((s, r) => s + Number(r.cost), 0);
+  const semi = SEMIS.find(s => s.name === semiName);
+  if (!semi) return;
+  const unitCost = semi.yield_g > 0 ? totalCost / semi.yield_g : 0;
+  await db.from('cost_semis').update({
+    total_cost: Math.round(totalCost * 100) / 100,
+    unit_cost: Math.round(unitCost * 1000000) / 1000000
+  }).eq('name', semiName);
+  await db.from('cost_semi_bom').update({
+    total_cost: Math.round(totalCost * 100) / 100
+  }).eq('semi_name', semiName);
+}
+
+async function recalcProduct(productName) {
+  const {data: rows} = await db.from('cost_bom').select('cost').eq('product', productName);
+  const totalCost = (rows||[]).reduce((s, r) => s + Number(r.cost), 0);
+  const prod = PRODUCTS.find(p => p.name === productName);
+  if (!prod) return;
+  const costPct = prod.price > 0 ? Math.round(totalCost / prod.price * 1000) / 10 : 0;
+  await db.from('cost_products').update({
+    cost: Math.round(totalCost * 100) / 100,
+    cost_pct: costPct
+  }).eq('name', productName);
+  await db.from('cost_bom').update({
+    total_cost: Math.round(totalCost * 100) / 100
+  }).eq('product', productName);
 }
 
 function showMaterial(idx) {
@@ -1083,6 +1129,8 @@ async function addSemiBomRow(semiName) {
   if (!cost || isNaN(cost)) return;
   const {error} = await db.from('cost_semi_bom').insert({semi_name: semiName, ingredient, qty, cost});
   if (error) { alert('新增失敗: ' + error.message); return; }
+  await recalcSemi(semiName);
+  await loadData();
   if (_showSemiIdx !== null) showSemi(_showSemiIdx);
 }
 
