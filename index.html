@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>眾旺成本查詢</title>
+<title>麻媽家．涼三伯｜成本查詢暨定價系統</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
 
@@ -425,15 +425,67 @@
   }
   .empty-icon { font-size: 40px; margin-bottom: 12px; }
   .empty-text { font-size: 15px; }
+
+  /* Pricing Panel */
+  .pr { padding: 12px 16px 80px; }
+  .pr .sec { background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; border: 1px solid var(--border); }
+  .pr .sec-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+  .pr .fld { margin-bottom: 10px; }
+  .pr .fld:last-child { margin-bottom: 0; }
+  .pr .fld-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .pr .fld-hint { font-size: 10px; color: var(--text3); }
+  .pr .fld-row { display: flex; gap: 8px; align-items: center; }
+  .pr .fld-row input, .pr .fld-row select { flex: 1; }
+  .pr input[type=number], .pr select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 15px; font-family: inherit; background: var(--surface2); -webkit-appearance: none;
+  }
+  .pr input:focus, .pr select:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .pr .unit { font-size: 13px; color: var(--text2); white-space: nowrap; min-width: 20px; }
+  .pr .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .pr .chip {
+    padding: 4px 10px; font-size: 11px; border: 1px solid var(--border); border-radius: 6px;
+    cursor: pointer; background: var(--surface); color: var(--text2); font-family: inherit;
+  }
+  .pr .chip:active { opacity: 0.7; }
+  .pr .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pr .tog-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .pr .tog-label { font-size: 13px; flex: 1; }
+  .pr .tog { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .pr .tog input { opacity: 0; width: 0; height: 0; }
+  .pr .tog .sl { position: absolute; inset: 0; background: #ddd; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+  .pr .tog .sl:before { content:''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+  .pr .tog input:checked + .sl { background: var(--accent); }
+  .pr .tog input:checked + .sl:before { transform: translateX(20px); }
+  .pr .res { background: linear-gradient(135deg, #fff7ed, #fff); border: 2px solid var(--accent); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+  .pr .res-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 10px; text-align: center; }
+  .pr .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pr .res-item { text-align: center; padding: 8px; border-radius: 8px; background: rgba(201,122,30,0.06); }
+  .pr .res-item .rl { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
+  .pr .res-item .rv { font-size: 20px; font-weight: 700; }
+  .pr .res-item .rs { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .pr .bk-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
+  .pr .bk-row:last-child { border-bottom: none; }
+  .pr .bk-row.tot { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; padding-top: 8px; margin-top: 4px; }
+  .pr .bk-row .bl { color: var(--text2); }
+  .pr .bk-row .bv { font-weight: 600; }
+  .pr .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pr .cmp-item { text-align: center; padding: 10px 8px; border-radius: 8px; border: 1px solid var(--border); }
+  .pr .cmp-item .cl { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
+  .pr .cmp-item .cv { font-size: 16px; font-weight: 700; }
+  .c-green { color: var(--green); }
+  .c-red { color: var(--red); }
+  .c-yellow { color: var(--yellow); }
+  .c-neutral { color: var(--text); }
 </style>
 </head>
-<script src="data.js"></script>
 <body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
-    <div class="login-logo">眾旺餐飲</div>
-    <div class="login-sub">成本查詢系統</div>
+    <div class="login-logo">麻媽家．涼三伯</div>
+    <div class="login-sub">成本查詢暨定價系統</div>
     <label class="login-label">帳號</label>
     <input class="login-input" id="loginUser" type="text" placeholder="請輸入帳號" autocomplete="username">
     <label class="login-label">密碼</label>
@@ -446,7 +498,7 @@
 <div id="appRoot" class="app-hidden">
 <div class="header">
   <div class="header-top">
-    <div class="logo">眾旺｜麻媽家・涼三伯 <span>成本查詢</span></div>
+    <div class="logo">麻媽家．涼三伯 <span>成本查詢暨定價系統</span></div>
     <div id="updateDate" style="font-size:11px;color:var(--text3)"></div>
   </div>
   <div class="search-wrap">
@@ -458,12 +510,14 @@
     <button class="tab" data-tab="materials">食材 <span id="matCount"></span></button>
     <button class="tab" data-tab="packaging">包材 <span id="pkgCount"></span></button>
     <button class="tab" data-tab="semis">半成品 <span id="semiCount"></span></button>
+    <button class="tab" data-tab="pricing">🧮 定價</button>
   </div>
 </div>
 
 <div class="store-filter" id="storeFilter"></div>
 <div class="count-bar" id="countBar"></div>
 <div class="list" id="listContainer"></div>
+<div id="pricingPanel" style="display:none"></div>
 
 </div><!-- /appRoot -->
 
@@ -475,9 +529,28 @@
 </div>
 
 <script>
-// 資料載入自 data.js
+const SUPABASE_URL = 'https://sjvnnpqhrlahgnbibvuv.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqdm5ucHFocmxhaGduYmlidnV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MDY5ODQsImV4cCI6MjA5MjA4Mjk4NH0.HqTV0y3CqmrlqGlDzw-Xrg8EiIdJm7Y81XvhlLkVqDc';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// 資料載入自 data.js
+let MATERIALS = [], PACKAGING = [], SEMIS = [], PRODUCTS = [];
+
+async function loadData() {
+  const [m, p, s, pr] = await Promise.all([
+    db.from('cost_materials').select('*').order('id'),
+    db.from('cost_packaging').select('*').order('id'),
+    db.from('cost_semis').select('*').order('name'),
+    db.from('cost_products').select('*').order('category').order('name'),
+  ]);
+  MATERIALS = (m.data || []).map(r => ({...r, price: Number(r.price), unit_cost: Number(r.unit_cost)}));
+  PACKAGING = (p.data || []).map(r => ({...r, price: Number(r.price), unit_cost: Number(r.unit_cost), qty: Number(r.qty)}));
+  SEMIS = (s.data || []).map(r => ({...r, total_cost: Number(r.total_cost), yield_g: Number(r.yield_g), unit_cost: Number(r.unit_cost)}));
+  PRODUCTS = (pr.data || []).map(r => ({...r, price: Number(r.price), cost: Number(r.cost), cost_pct: Number(r.cost_pct)}));
+  document.getElementById('prodCount').textContent = PRODUCTS.length;
+  document.getElementById('matCount').textContent = MATERIALS.length;
+  document.getElementById('pkgCount').textContent = PACKAGING.length;
+  document.getElementById('semiCount').textContent = SEMIS.length;
+}
 
 const ICONS = { mat: '🥬', semi: '🍲', prod: '🍱', pkg: '📦' };
 const STORE_COLORS = { '麻媽家': '#c97a1e', '涼三伯': '#2e7d56', 'ALL': '#999' };
@@ -706,6 +779,120 @@ function toggleGroup(key) {
   }
 }
 
+function isAdmin() { return sessionStorage.getItem('cq_auth') === 'rene'; }
+
+function adminBtns(type, idx) {
+  if (!isAdmin()) return '';
+  return `<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+    <button onclick="editItem('${type}',${idx})" style="padding:6px 16px;border-radius:8px;border:1px solid #d97706;color:#d97706;background:transparent;cursor:pointer;font-size:14px">✏️ 編輯</button>
+    <button onclick="deleteItem('${type}',${idx})" style="padding:6px 16px;border-radius:8px;border:1px solid #dc2626;color:#dc2626;background:transparent;cursor:pointer;font-size:14px">🗑 刪除</button>
+  </div>`;
+}
+
+function editItem(type, idx) {
+  let fields, item, title;
+  if (type === 'product') {
+    item = PRODUCTS[idx]; title = '編輯品項';
+    fields = [
+      {k:'name',l:'品名',v:item.name},
+      {k:'category',l:'分類',v:item.category},
+      {k:'store',l:'門店',v:item.store},
+      {k:'price',l:'售價',v:item.price,t:'number'},
+      {k:'cost',l:'成本',v:item.cost,t:'number'},
+      {k:'cost_pct',l:'成本率(%)',v:item.cost_pct,t:'number'},
+    ];
+  } else if (type === 'material') {
+    item = MATERIALS[idx]; title = '編輯原料';
+    fields = [
+      {k:'id',l:'編號',v:item.id,ro:true},
+      {k:'name',l:'名稱',v:item.name},
+      {k:'spec',l:'規格',v:item.spec},
+      {k:'price',l:'進貨單價',v:item.price,t:'number'},
+      {k:'unit_cost',l:'單位成本',v:item.unit_cost,t:'number'},
+      {k:'unit',l:'單位',v:item.unit},
+      {k:'category',l:'分類',v:item.category},
+      {k:'store',l:'門店',v:item.store},
+    ];
+  } else if (type === 'semi') {
+    item = SEMIS[idx]; title = '編輯半成品';
+    fields = [
+      {k:'name',l:'名稱',v:item.name},
+      {k:'total_cost',l:'總材料成本',v:item.total_cost,t:'number'},
+      {k:'yield_g',l:'產出量(g)',v:item.yield_g,t:'number'},
+      {k:'unit_cost',l:'單位成本(每g)',v:item.unit_cost,t:'number'},
+      {k:'note',l:'備註',v:item.note||''},
+    ];
+  } else {
+    item = PACKAGING[idx]; title = '編輯包材';
+    fields = [
+      {k:'id',l:'編號',v:item.id,ro:true},
+      {k:'name',l:'名稱',v:item.name},
+      {k:'spec',l:'規格',v:item.spec},
+      {k:'price',l:'進貨單價',v:item.price,t:'number'},
+      {k:'qty',l:'每箱數量',v:item.qty,t:'number'},
+      {k:'unit_cost',l:'單位成本',v:item.unit_cost,t:'number'},
+      {k:'store',l:'門店',v:item.store},
+    ];
+  }
+  const rows = fields.map(f => `
+    <div style="margin-bottom:10px">
+      <label style="display:block;font-size:12px;color:#888;margin-bottom:2px">${f.l}</label>
+      <input id="ef_${f.k}" value="${f.v}" type="${f.t||'text'}" step="any" ${f.ro?'readonly style="opacity:0.5"':''} style="width:100%;padding:8px;border:1px solid #333;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:14px;box-sizing:border-box">
+    </div>
+  `).join('');
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header"><div class="modal-title">${title}</div></div>
+    <div class="modal-body">${rows}
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button onclick="closeModal()" style="padding:8px 20px;border-radius:8px;border:1px solid #555;color:#aaa;background:transparent;cursor:pointer">取消</button>
+        <button onclick="saveItem('${type}',${idx})" style="padding:8px 20px;border-radius:8px;border:none;background:#d97706;color:#fff;cursor:pointer;font-weight:600">儲存</button>
+      </div>
+    </div>`;
+}
+
+async function saveItem(type, idx) {
+  const get = k => document.getElementById('ef_'+k)?.value;
+  let table, data, match;
+  if (type === 'product') {
+    table = 'cost_products';
+    const item = PRODUCTS[idx];
+    data = {name:get('name'),category:get('category'),store:get('store'),price:Number(get('price')),cost:Number(get('cost')),cost_pct:Number(get('cost_pct'))};
+    match = {id: item.id};
+  } else if (type === 'material') {
+    table = 'cost_materials';
+    data = {name:get('name'),spec:get('spec'),price:Number(get('price')),unit_cost:Number(get('unit_cost')),unit:get('unit'),category:get('category'),store:get('store')};
+    match = {id: get('id')};
+  } else if (type === 'semi') {
+    table = 'cost_semis';
+    const item = SEMIS[idx];
+    data = {name:get('name'),total_cost:Number(get('total_cost')),yield_g:Number(get('yield_g')),unit_cost:Number(get('unit_cost')),note:get('note')||null};
+    match = {id: item.id};
+  } else {
+    table = 'cost_packaging';
+    data = {name:get('name'),spec:get('spec'),price:Number(get('price')),qty:Number(get('qty')),unit_cost:Number(get('unit_cost')),store:get('store')};
+    match = {id: get('id')};
+  }
+  const {error} = await db.from(table).update(data).eq('id', match.id);
+  if (error) { alert('儲存失敗: ' + error.message); return; }
+  await loadData();
+  closeModal();
+  renderList();
+}
+
+async function deleteItem(type, idx) {
+  if (!confirm('確定刪除此筆資料？')) return;
+  let table, id;
+  if (type === 'product') { table = 'cost_products'; id = PRODUCTS[idx].id; }
+  else if (type === 'material') { table = 'cost_materials'; id = MATERIALS[idx].id; }
+  else if (type === 'semi') { table = 'cost_semis'; id = SEMIS[idx].id; }
+  else { table = 'cost_packaging'; id = PACKAGING[idx].id; }
+  const {error} = await db.from(table).delete().eq('id', id);
+  if (error) { alert('刪除失敗: ' + error.message); return; }
+  await loadData();
+  closeModal();
+  renderList();
+}
+
 function showProduct(idx) {
   const p = PRODUCTS[idx];
   const margin = p.price - p.cost;
@@ -737,6 +924,7 @@ function showProduct(idx) {
           <div class="stat-value green">$${margin.toFixed(2)}</div>
         </div>
       </div>
+      ${adminBtns('product', idx)}
     </div>
   `;
   showModal();
@@ -768,6 +956,7 @@ function showMaterial(idx) {
       <div class="spec-row"><span class="spec-label">包裝規格</span><span class="spec-value">${m.spec}</span></div>
       <div class="spec-row"><span class="spec-label">換算單位</span><span class="spec-value">${m.unit}</span></div>
       <div class="spec-row"><span class="spec-label">門店</span><span class="spec-value">${m.store}</span></div>
+      ${adminBtns('material', idx)}
     </div>
   `;
   showModal();
@@ -798,6 +987,7 @@ function showSemi(idx) {
       <div class="spec-row"><span class="spec-label">產出量</span><span class="spec-value">${s.yield_g}g</span></div>
       <div class="spec-row"><span class="spec-label">換算</span><span class="spec-value">${(s.yield_g/1000).toFixed(2)} kg</span></div>
       ${s.note ? `<div class="spec-row"><span class="spec-label">備註</span><span class="spec-value">${s.note}</span></div>` : ''}
+      ${adminBtns('semi', idx)}
     </div>
   `;
   showModal();
@@ -828,6 +1018,7 @@ function showPackaging(idx) {
       <div class="spec-row"><span class="spec-label">包裝規格</span><span class="spec-value">${p.spec}</span></div>
       <div class="spec-row"><span class="spec-label">每箱數量</span><span class="spec-value">${p.qty} 個</span></div>
       <div class="spec-row"><span class="spec-label">門店</span><span class="spec-value">${p.store}</span></div>
+      ${adminBtns('packaging', idx)}
     </div>
   `;
   showModal();
@@ -836,12 +1027,11 @@ function showPackaging(idx) {
 function showModal() {
   document.getElementById('modalOverlay').classList.add('show');
 }
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
 
 // Init
-document.getElementById('prodCount').textContent = PRODUCTS.length;
-document.getElementById('matCount').textContent = MATERIALS.length;
-document.getElementById('pkgCount').textContent = PACKAGING.length;
-document.getElementById('semiCount').textContent = SEMIS.length;
 document.getElementById('updateDate').textContent = 'v19';
 
 document.querySelectorAll('.tab').forEach(t => {
@@ -851,8 +1041,22 @@ document.querySelectorAll('.tab').forEach(t => {
     currentTab = t.dataset.tab;
     currentStore = 'ALL';
     window._collapsed = {};
-    renderStoreFilter();
-    renderList();
+    if (currentTab === 'pricing') {
+      document.getElementById('storeFilter').style.display = 'none';
+      document.getElementById('countBar').style.display = 'none';
+      document.getElementById('listContainer').style.display = 'none';
+      document.querySelector('.search-wrap').style.display = 'none';
+      document.getElementById('pricingPanel').style.display = 'block';
+      renderPricing();
+    } else {
+      document.getElementById('storeFilter').style.display = '';
+      document.getElementById('countBar').style.display = '';
+      document.getElementById('listContainer').style.display = '';
+      document.querySelector('.search-wrap').style.display = '';
+      document.getElementById('pricingPanel').style.display = 'none';
+      renderStoreFilter();
+      renderList();
+    }
   });
 });
 
@@ -875,13 +1079,14 @@ const USERS = {
   'jerry': 'jerry888'
 };
 
-function doLogin() {
+async function doLogin() {
   const u = document.getElementById('loginUser').value.trim().toLowerCase();
   const p = document.getElementById('loginPass').value;
   if (USERS[u] && USERS[u] === p) {
     sessionStorage.setItem('cq_auth', u);
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appRoot').classList.remove('app-hidden');
+    await loadData();
     renderStoreFilter();
     renderList();
   } else {
@@ -895,16 +1100,202 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
 });
 
-// Check session
-if (sessionStorage.getItem('cq_auth')) {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appRoot').classList.remove('app-hidden');
-} else {
-  // Don't render until logged in
-}
+// Check session — auto-login if session exists
+(async () => {
+  if (sessionStorage.getItem('cq_auth')) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appRoot').classList.remove('app-hidden');
+    await loadData();
+    renderStoreFilter();
+    renderList();
+  }
+})();
 // ─────────────────────────────────────────
 
-if (sessionStorage.getItem('cq_auth')) { renderStoreFilter(); renderList(); }
+// ── 定價試算 ──────────────────────────────
+const PR = {
+  product: '', foodCost: '', sellingPrice: '', platform: 'uber', commRate: 33,
+  hasPromo: false, promoThreshold: 250, promoDiscount: 20, promoBear: 100,
+  hasAd: true, adType: 'percent', adPct: 10, adFixed: 0, adSubsidy: 0, qty: 1
+};
+const PLATS = { uber: { n: 'UberEats', c: 33 }, panda: { n: 'Foodpanda', c: 31 }, custom: { n: '自訂', c: 33 } };
+
+function prFmt(n) { return '$' + Math.abs(Math.round(n)).toLocaleString(); }
+
+function prCalc() {
+  const price = Number(PR.sellingPrice)||0, cost = Number(PR.foodCost)||0;
+  const qty = Math.max(1, Number(PR.qty)||1), cr = PR.commRate/100;
+  let total = price * qty, disc = 0, mBear = 0;
+  if (PR.hasPromo && total >= Number(PR.promoThreshold)) {
+    disc = total * (PR.promoDiscount/100);
+    mBear = disc * (PR.promoBear/100);
+  }
+  const afterDisc = total - mBear;
+  const comm = afterDisc * cr;
+  let ad = 0;
+  if (PR.hasAd) ad = PR.adType === 'percent' ? afterDisc * (PR.adPct/100) : (Number(PR.adFixed)||0);
+  const sub = Number(PR.adSubsidy)||0;
+  const realAd = Math.max(0, ad - sub);
+  const deduct = comm + realAd + mBear;
+  const net = total - deduct;
+  const foodTotal = cost * qty;
+  const profit = net - foodTotal;
+  const mrgSell = price > 0 ? profit/total*100 : 0;
+  return { total, disc, mBear, afterDisc, comm, ad, sub, realAd, deduct, net, foodTotal, profit, mrgSell, price, cost, qty, perNet: net/qty, perProfit: profit/qty };
+}
+
+function prSuggest() {
+  const cost = Number(PR.foodCost)||0;
+  if (cost <= 0) return null;
+  const cr = PR.commRate/100, ar = (PR.hasAd && PR.adType==='percent') ? PR.adPct/100 : 0;
+  return [20,25,30].map(t => ({ t, p: Math.ceil(cost/(1-cr-ar-t/100)/5)*5 }));
+}
+
+function renderPricing() {
+  const r = prCalc();
+  const sug = prSuggest();
+  const pCls = r.profit > 0 ? 'c-green' : r.profit < 0 ? 'c-red' : 'c-neutral';
+  const mCls = r.mrgSell >= 20 ? 'c-green' : r.mrgSell >= 10 ? 'c-yellow' : 'c-red';
+
+  const prodOptions = PRODUCTS.map((p,i) => `<option value="${i}" ${PR.product===String(i)?'selected':''}>${p.name}（${p.store}）— 成本$${p.cost} / 售$${p.price}</option>`).join('');
+
+  let h = `<div class="pr">
+    <div class="sec">
+      <div class="sec-title">🍜 選擇產品或手動輸入</div>
+      <div class="fld">
+        <div class="fld-label">從產品庫選擇</div>
+        <select onchange="prPickProduct(this.value)">
+          <option value="">— 手動輸入 —</option>
+          ${prodOptions}
+        </select>
+      </div>
+      <div class="fld">
+        <div class="fld-label"><span>食材成本（每份）</span></div>
+        <div class="fld-row"><span class="unit">$</span><input type="number" inputmode="decimal" placeholder="例：85" value="${PR.foodCost}" onchange="prUpd('foodCost',this.value)"></div>
+      </div>
+      <div class="fld">
+        <div class="fld-label"><span>平台售價（每份）</span>${sug && !PR.sellingPrice ? '<span class="fld-hint">👇 或用建議</span>' : ''}</div>
+        <div class="fld-row"><span class="unit">$</span><input type="number" inputmode="decimal" placeholder="例：200" value="${PR.sellingPrice}" onchange="prUpd('sellingPrice',this.value)"></div>
+      </div>
+      ${sug ? `<div class="fld"><div class="fld-label">建議售價</div><div class="chips">${sug.map(s=>`<span class="chip ${Number(PR.sellingPrice)===s.p?'on':''}" onclick="prUpd('sellingPrice',${s.p})">目標${s.t}% → $${s.p}</span>`).join('')}</div></div>` : ''}
+      <div class="fld">
+        <div class="fld-label">每單數量</div>
+        <div class="fld-row"><input type="number" inputmode="numeric" min="1" value="${PR.qty}" onchange="prUpd('qty',this.value)"><span class="unit">份</span></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🛵 平台設定</div>
+      <div class="fld">
+        <div class="chips">${Object.entries(PLATS).map(([k,v])=>`<span class="chip ${PR.platform===k?'on':''}" onclick="prSetPlat('${k}')">${v.n}</span>`).join('')}</div>
+      </div>
+      <div class="fld">
+        <div class="fld-label">佣金抽成</div>
+        <div class="fld-row"><input type="number" inputmode="decimal" min="0" max="50" value="${PR.commRate}" onchange="prUpd('commRate',this.value)"><span class="unit">%</span></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🏷️ 活動折扣</div>
+      <div class="tog-row"><span class="tog-label">啟用活動折扣</span><label class="tog"><input type="checkbox" ${PR.hasPromo?'checked':''} onchange="prUpd('hasPromo',this.checked)"><span class="sl"></span></label></div>
+      ${PR.hasPromo ? `
+      <div class="fld"><div class="fld-label">滿額門檻</div><div class="fld-row"><span class="unit">$</span><input type="number" inputmode="decimal" value="${PR.promoThreshold}" onchange="prUpd('promoThreshold',this.value)"></div></div>
+      <div class="fld"><div class="fld-label">折扣幅度</div><div class="fld-row"><input type="number" inputmode="decimal" min="0" max="100" value="${PR.promoDiscount}" onchange="prUpd('promoDiscount',this.value)"><span class="unit">% off</span></div>
+        <div class="chips" style="margin-top:6px">
+          <span class="chip ${PR.promoDiscount==10?'on':''}" onclick="prUpd('promoDiscount',10)">9折</span>
+          <span class="chip ${PR.promoDiscount==15?'on':''}" onclick="prUpd('promoDiscount',15)">85折</span>
+          <span class="chip ${PR.promoDiscount==20?'on':''}" onclick="prUpd('promoDiscount',20)">8折</span>
+          <span class="chip ${PR.promoDiscount==25?'on':''}" onclick="prUpd('promoDiscount',25)">75折</span>
+          <span class="chip ${PR.promoDiscount==30?'on':''}" onclick="prUpd('promoDiscount',30)">7折</span>
+        </div>
+      </div>
+      <div class="fld"><div class="fld-label"><span>商家吸收比例</span><span class="fld-hint">0%=平台全補</span></div><div class="fld-row"><input type="number" inputmode="decimal" min="0" max="100" value="${PR.promoBear}" onchange="prUpd('promoBear',this.value)"><span class="unit">%</span></div>
+        <div class="chips" style="margin-top:6px">
+          <span class="chip ${PR.promoBear==0?'on':''}" onclick="prUpd('promoBear',0)">平台全補</span>
+          <span class="chip ${PR.promoBear==50?'on':''}" onclick="prUpd('promoBear',50)">各半</span>
+          <span class="chip ${PR.promoBear==100?'on':''}" onclick="prUpd('promoBear',100)">商家全吸</span>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📢 廣告費</div>
+      <div class="tog-row"><span class="tog-label">有廣告費</span><label class="tog"><input type="checkbox" ${PR.hasAd?'checked':''} onchange="prUpd('hasAd',this.checked)"><span class="sl"></span></label></div>
+      ${PR.hasAd ? `
+      <div class="fld"><div class="chips"><span class="chip ${PR.adType==='percent'?'on':''}" onclick="prUpd('adType','percent')">按營收%</span><span class="chip ${PR.adType==='fixed'?'on':''}" onclick="prUpd('adType','fixed')">固定金額/單</span></div></div>
+      ${PR.adType==='percent' ? `<div class="fld"><div class="fld-label">廣告費率</div><div class="fld-row"><input type="number" inputmode="decimal" min="0" max="30" value="${PR.adPct}" onchange="prUpd('adPct',this.value)"><span class="unit">%</span></div></div>`
+        : `<div class="fld"><div class="fld-label">每單廣告費</div><div class="fld-row"><span class="unit">$</span><input type="number" inputmode="decimal" min="0" value="${PR.adFixed}" onchange="prUpd('adFixed',this.value)"></div></div>`}
+      <div class="fld"><div class="fld-label"><span>平台廣告補貼</span><span class="fld-hint">0=無補貼</span></div><div class="fld-row"><span class="unit">$</span><input type="number" inputmode="decimal" min="0" value="${PR.adSubsidy}" onchange="prUpd('adSubsidy',this.value)"><span class="unit">/單</span></div></div>
+      ` : ''}
+    </div>`;
+
+  if (r.price > 0) {
+    h += `
+    <div class="res">
+      <div class="res-title">📊 計算結果${r.qty>1?'（'+r.qty+' 份）':''}</div>
+      <div class="res-grid">
+        <div class="res-item"><div class="rl">客人付款</div><div class="rv c-neutral">${prFmt(r.total)}${r.disc>0?'<br><span style="font-size:12px" class="c-yellow">折後'+prFmt(r.total-r.disc)+'</span>':''}</div></div>
+        <div class="res-item"><div class="rl">實際到手</div><div class="rv ${r.net>0?'c-green':'c-red'}">${prFmt(r.net)}</div><div class="rs">每份 ${prFmt(r.perNet)}</div></div>
+        <div class="res-item"><div class="rl">毛利</div><div class="rv ${pCls}">${prFmt(r.profit)}</div><div class="rs">每份 ${prFmt(r.perProfit)}</div></div>
+        <div class="res-item"><div class="rl">利潤率</div><div class="rv ${mCls}">${r.mrgSell.toFixed(1)}%</div><div class="rs">佔售價</div></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="bk-row"><span class="bl">訂單金額</span><span class="bv">${prFmt(r.total)}</span></div>
+        ${r.mBear>0?`<div class="bk-row"><span class="bl">− 商家吸收折扣</span><span class="bv c-red">-${prFmt(r.mBear)}</span></div>`:''}
+        <div class="bk-row"><span class="bl">− 佣金 (${PR.commRate}%)</span><span class="bv c-red">-${prFmt(r.comm)}</span></div>
+        ${r.realAd>0?`<div class="bk-row"><span class="bl">− 廣告費${r.sub>0?'（扣補貼'+prFmt(r.sub)+'）':''}</span><span class="bv c-red">-${prFmt(r.realAd)}</span></div>`:''}
+        ${r.sub>0&&r.realAd===0?`<div class="bk-row"><span class="bl">　廣告費（平台全額補貼）</span><span class="bv c-green">$0</span></div>`:''}
+        <div class="bk-row" style="font-weight:600"><span class="bl">= 實際到手</span><span class="bv">${prFmt(r.net)}</span></div>
+        <div class="bk-row"><span class="bl">− 食材成本</span><span class="bv">-${prFmt(r.foodTotal)}</span></div>
+        <div class="bk-row tot"><span class="bl">= 毛利（未含人事租金）</span><span class="bv ${pCls}">${r.profit>=0?'':'-'}${prFmt(Math.abs(r.profit))}</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">⚖️ 現場 vs 平台</div>
+      <div class="cmp-grid">
+        <div class="cmp-item"><div class="cl">現場售價</div><div class="cv">${prFmt(r.price)}</div></div>
+        <div class="cmp-item"><div class="cl">現場毛利</div><div class="cv c-green">${prFmt(r.price - r.cost)}</div></div>
+        <div class="cmp-item"><div class="cl">平台到手/份</div><div class="cv">${prFmt(r.perNet)}</div></div>
+        <div class="cmp-item"><div class="cl">平台毛利/份</div><div class="cv ${pCls}">${prFmt(r.perProfit)}</div></div>
+      </div>
+      <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--text3)">
+        平台到手為現場的 <strong style="color:${r.perNet/r.price>=0.6?'var(--green)':r.perNet/r.price>=0.5?'var(--yellow)':'var(--red)'}">${(r.perNet/r.price*100).toFixed(0)}%</strong>
+        ｜毛利差 <strong class="${pCls}">${r.perProfit-(r.price-r.cost)>=0?'+':''}${prFmt(r.perProfit-(r.price-r.cost))}</strong>/份
+      </div>
+    </div>`;
+  } else {
+    h += `<div class="sec" style="text-align:center;color:var(--text3);padding:32px">👆 選擇產品或輸入成本與售價</div>`;
+  }
+  h += '</div>';
+  document.getElementById('pricingPanel').innerHTML = h;
+}
+
+function prUpd(k, v) {
+  if (typeof v === 'string' && !['adType','platform','product'].includes(k)) {
+    if (v === '') { PR[k] = ''; renderPricing(); return; }
+    v = k === 'hasPromo' || k === 'hasAd' ? v : parseFloat(v);
+  }
+  PR[k] = v;
+  renderPricing();
+}
+
+function prSetPlat(p) {
+  PR.platform = p;
+  PR.commRate = PLATS[p].c;
+  renderPricing();
+}
+
+function prPickProduct(idx) {
+  PR.product = idx;
+  if (idx === '') { PR.foodCost = ''; PR.sellingPrice = ''; }
+  else {
+    const p = PRODUCTS[Number(idx)];
+    PR.foodCost = p.cost;
+    PR.sellingPrice = p.price;
+  }
+  renderPricing();
+}
+// ─────────────────────────────────────────
 </script>
 </body>
 </html>
