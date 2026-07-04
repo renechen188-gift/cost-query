@@ -902,13 +902,13 @@ async function showProduct(idx) {
   const {data: bom} = await db.from('cost_bom').select('*').eq('product', p.name).order('type').order('cost', {ascending: false});
   const adm = isAdmin();
   const bomRows = (bom||[]).map(b => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b">
-      <div style="flex:1;min-width:0">
+    <div id="bom-row-${b.id}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b${adm?';cursor:pointer':''}">
+      <div style="flex:1;min-width:0" ${adm?`onclick="editBomRow(${b.id},'bom','${b.ingredient.replace(/'/g,"\\'")}',${b.qty},'${b.unit}',${Number(b.cost).toFixed(4)})"`:''}>
         <span style="font-size:13px">${b.ingredient}</span>
         <span style="font-size:11px;color:#64748b;margin-left:6px">${b.qty}${b.unit}</span>
       </div>
-      <span style="font-size:13px;font-weight:600;color:#d97706;margin-right:${adm?'8px':'0'}">$${Number(b.cost).toFixed(2)}</span>
-      ${adm ? `<button onclick="delBomRow(${b.id},'bom')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 4px" title="刪除">✕</button>` : ''}
+      <span style="font-size:13px;font-weight:600;color:#d97706;margin-right:${adm?'8px':'0'}"${adm?` onclick="editBomRow(${b.id},'bom','${b.ingredient.replace(/'/g,"\\'")}',${b.qty},'${b.unit}',${Number(b.cost).toFixed(4)})" style="cursor:pointer"`:''}>$${Number(b.cost).toFixed(2)}</span>
+      ${adm ? `<button onclick="event.stopPropagation();delBomRow(${b.id},'bom')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 4px" title="刪除">✕</button>` : ''}
     </div>`).join('');
   const addBtn = adm ? `<button onclick="addBomRow('${p.name.replace(/'/g,"\\'")}')" style="width:100%;margin-top:8px;padding:8px;border:1px dashed #475569;border-radius:8px;background:transparent;color:#94a3b8;cursor:pointer;font-size:13px">＋ 新增配料</button>` : '';
   document.getElementById('modalContent').innerHTML = `
@@ -967,6 +967,35 @@ async function addBomRow(productName) {
   if (_showProductIdx !== null) showProduct(_showProductIdx);
 }
 
+function editBomRow(id, table, curIng, curQty, curUnit, curCost) {
+  const container = document.getElementById('bom-row-' + id);
+  if (!container) return;
+  container.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0;align-items:center">
+      <input id="be_ing_${id}" value="${curIng}" placeholder="配料" style="flex:2;min-width:80px;padding:6px;border:1px solid #475569;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:13px">
+      <input id="be_qty_${id}" type="number" step="any" value="${curQty}" placeholder="用量" style="width:60px;padding:6px;border:1px solid #475569;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:13px;text-align:center">
+      <input id="be_unit_${id}" value="${curUnit}" placeholder="單位" style="width:36px;padding:6px;border:1px solid #475569;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:13px;text-align:center">
+      <input id="be_cost_${id}" type="number" step="any" value="${curCost}" placeholder="成本" style="width:65px;padding:6px;border:1px solid #475569;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:13px;text-align:center">
+      <button onclick="saveBomEdit(${id},'${table}')" style="padding:4px 10px;border:none;border-radius:6px;background:#d97706;color:#fff;cursor:pointer;font-size:12px;font-weight:600">存</button>
+      <button onclick="${table==='semi'?'showSemi(_showSemiIdx)':'showProduct(_showProductIdx)'}" style="padding:4px 8px;border:1px solid #475569;border-radius:6px;background:transparent;color:#94a3b8;cursor:pointer;font-size:12px">取消</button>
+    </div>`;
+  document.getElementById('be_ing_' + id).focus();
+}
+
+async function saveBomEdit(id, table) {
+  const ing = document.getElementById('be_ing_'+id).value.trim();
+  const qty = parseFloat(document.getElementById('be_qty_'+id).value);
+  const cost = parseFloat(document.getElementById('be_cost_'+id).value);
+  if (!ing) { alert('請填配料名稱'); return; }
+  const t = table === 'semi' ? 'cost_semi_bom' : 'cost_bom';
+  const data = {ingredient: ing, qty: qty||0, cost: cost||0};
+  if (table !== 'semi') data.unit = document.getElementById('be_unit_'+id).value.trim() || 'g';
+  const {error} = await db.from(t).update(data).eq('id', id);
+  if (error) { alert('儲存失敗: ' + error.message); return; }
+  if (table === 'semi') showSemi(_showSemiIdx);
+  else showProduct(_showProductIdx);
+}
+
 function showMaterial(idx) {
   const m = MATERIALS[idx];
   document.getElementById('modalContent').innerHTML = `
@@ -1006,13 +1035,13 @@ async function showSemi(idx) {
   const {data: bom} = await db.from('cost_semi_bom').select('*').eq('semi_name', s.name).order('cost', {ascending: false});
   const adm = isAdmin();
   const bomRows = (bom||[]).map(b => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b">
-      <div style="flex:1;min-width:0">
+    <div id="bom-row-${b.id}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b${adm?';cursor:pointer':''}">
+      <div style="flex:1;min-width:0" ${adm?`onclick="editBomRow(${b.id},'semi','${b.ingredient.replace(/'/g,"\\'")}',${b.qty},'g',${Number(b.cost).toFixed(4)})"`:''}>
         <span style="font-size:13px">${b.ingredient}</span>
         <span style="font-size:11px;color:#64748b;margin-left:6px">${Number(b.qty).toFixed(0)}g</span>
       </div>
       <span style="font-size:13px;font-weight:600;color:#d97706;margin-right:${adm?'8px':'0'}">$${Number(b.cost).toFixed(2)}</span>
-      ${adm ? `<button onclick="delBomRow(${b.id},'semi')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 4px" title="刪除">✕</button>` : ''}
+      ${adm ? `<button onclick="event.stopPropagation();delBomRow(${b.id},'semi')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 4px" title="刪除">✕</button>` : ''}
     </div>`).join('');
   const addBtn = adm ? `<button onclick="addSemiBomRow('${s.name.replace(/'/g,"\\'")}')" style="width:100%;margin-top:8px;padding:8px;border:1px dashed #475569;border-radius:8px;background:transparent;color:#94a3b8;cursor:pointer;font-size:13px">＋ 新增配料</button>` : '';
   document.getElementById('modalContent').innerHTML = `
