@@ -967,12 +967,16 @@ async function delBomRow(id, table) {
   const {error} = await db.from(t).delete().eq('id', id);
   if (error) { alert('刪除失敗: ' + error.message); return; }
   if (table === 'semi' && _showSemiIdx !== null) {
-    await recalcSemi(SEMIS[_showSemiIdx].name);
+    const semiName = SEMIS[_showSemiIdx].name;
+    await recalcSemi(semiName);
     await loadData();
+    _showSemiIdx = SEMIS.findIndex(s => s.name === semiName);
     showSemi(_showSemiIdx);
   } else if (_showProductIdx !== null) {
-    await recalcProduct(PRODUCTS[_showProductIdx].name);
+    const prodName = PRODUCTS[_showProductIdx].name;
+    await recalcProduct(prodName);
     await loadData();
+    _showProductIdx = PRODUCTS.findIndex(p => p.name === prodName);
     showProduct(_showProductIdx);
   }
 }
@@ -989,7 +993,8 @@ async function addBomRow(productName) {
   if (error) { alert('新增失敗: ' + error.message); return; }
   await recalcProduct(productName);
   await loadData();
-  if (_showProductIdx !== null) showProduct(_showProductIdx);
+  _showProductIdx = PRODUCTS.findIndex(p => p.name === productName);
+  if (_showProductIdx >= 0) showProduct(_showProductIdx);
 }
 
 function editBomRow(id, table, curIng, curQty, curUnit, curCost) {
@@ -1021,12 +1026,16 @@ async function saveBomEdit(id, table) {
   const {error} = await db.from(t).update(data).eq('id', id);
   if (error) { alert('儲存失敗: ' + error.message); return; }
   if (table === 'semi') {
-    await recalcSemi(SEMIS[_showSemiIdx].name);
+    const semiName = SEMIS[_showSemiIdx].name;
+    await recalcSemi(semiName);
     await loadData();
+    _showSemiIdx = SEMIS.findIndex(s => s.name === semiName);
     showSemi(_showSemiIdx);
   } else {
-    await recalcProduct(PRODUCTS[_showProductIdx].name);
+    const prodName = PRODUCTS[_showProductIdx].name;
+    await recalcProduct(prodName);
     await loadData();
+    _showProductIdx = PRODUCTS.findIndex(p => p.name === prodName);
     showProduct(_showProductIdx);
   }
 }
@@ -1034,9 +1043,9 @@ async function saveBomEdit(id, table) {
 async function recalcSemi(semiName) {
   const {data: rows} = await db.from('cost_semi_bom').select('cost').eq('semi_name', semiName);
   const totalCost = (rows||[]).reduce((s, r) => s + Number(r.cost), 0);
-  const semi = SEMIS.find(s => s.name === semiName);
-  if (!semi) return;
-  const unitCost = semi.yield_g > 0 ? totalCost / semi.yield_g : 0;
+  const {data: dbSemi} = await db.from('cost_semis').select('yield_g').eq('name', semiName).single();
+  const yieldG = dbSemi ? Number(dbSemi.yield_g) : 0;
+  const unitCost = yieldG > 0 ? totalCost / yieldG : 0;
   await db.from('cost_semis').update({
     total_cost: Math.round(totalCost * 100) / 100,
     unit_cost: Math.round(unitCost * 1000000) / 1000000
@@ -1049,9 +1058,9 @@ async function recalcSemi(semiName) {
 async function recalcProduct(productName) {
   const {data: rows} = await db.from('cost_bom').select('cost').eq('product', productName);
   const totalCost = (rows||[]).reduce((s, r) => s + Number(r.cost), 0);
-  const prod = PRODUCTS.find(p => p.name === productName);
-  if (!prod) return;
-  const costPct = prod.price > 0 ? Math.round(totalCost / prod.price * 1000) / 10 : 0;
+  const {data: dbProd} = await db.from('cost_products').select('price').eq('name', productName).single();
+  const price = dbProd ? Number(dbProd.price) : 0;
+  const costPct = price > 0 ? Math.round(totalCost / price * 1000) / 10 : 0;
   await db.from('cost_products').update({
     cost: Math.round(totalCost * 100) / 100,
     cost_pct: costPct
@@ -1162,7 +1171,8 @@ async function addSemiBomRow(semiName) {
   if (error) { alert('新增失敗: ' + error.message); return; }
   await recalcSemi(semiName);
   await loadData();
-  if (_showSemiIdx !== null) showSemi(_showSemiIdx);
+  _showSemiIdx = SEMIS.findIndex(s => s.name === semiName);
+  if (_showSemiIdx >= 0) showSemi(_showSemiIdx);
 }
 
 function showPackaging(idx) {
@@ -1204,7 +1214,7 @@ function closeModal() {
 }
 
 // Init
-document.getElementById('updateDate').textContent = 'v21';
+document.getElementById('updateDate').textContent = 'v22';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
