@@ -798,8 +798,8 @@ function editItem(type, idx) {
       {k:'category',l:'分類',v:item.category},
       {k:'store',l:'門店',v:item.store},
       {k:'price',l:'售價',v:item.price,t:'number'},
-      {k:'cost',l:'成本',v:item.cost,t:'number'},
-      {k:'cost_pct',l:'成本率(%)',v:item.cost_pct,t:'number'},
+      {k:'cost',l:'成本',v:item.cost,t:'number',ro:true},
+      {k:'cost_pct',l:'成本率(%)',v:item.cost_pct,t:'number',ro:true},
     ];
   } else if (type === 'material') {
     item = MATERIALS[idx]; title = '編輯原料';
@@ -856,7 +856,10 @@ async function saveItem(type, idx) {
   if (type === 'product') {
     table = 'cost_products';
     const item = PRODUCTS[idx];
-    data = {name:get('name'),category:get('category'),store:get('store'),price:Number(get('price')),cost:Number(get('cost')),cost_pct:Number(get('cost_pct'))};
+    const price = Number(get('price'));
+    const cost = Number(get('cost')) || item.cost;
+    const costPct = price > 0 ? Math.round(cost / price * 1000) / 10 : 0;
+    data = {name:get('name'),category:get('category'),store:get('store'),price,cost,cost_pct:costPct};
     match = {id: item.id};
   } else if (type === 'material') {
     table = 'cost_materials';
@@ -901,16 +904,29 @@ async function showProduct(idx) {
   const pctClass = getPctClass(p.cost_pct);
   const {data: bom} = await db.from('cost_bom').select('*').eq('product', p.name).order('type').order('cost', {ascending: false});
   const adm = isAdmin();
-  const bomRows = (bom||[]).map(b => `
-    <div id="bom-row-${b.id}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b${adm?';cursor:pointer':''}">
-      <div style="flex:1;min-width:0" ${adm?`onclick="editBomRow(${b.id},'bom','${b.ingredient.replace(/'/g,"\\'")}',${b.qty},'${b.unit}',${Number(b.cost).toFixed(4)})"`:''}>
-        <span style="font-size:13px">${b.ingredient}</span>
-        <span style="font-size:11px;color:#64748b;margin-left:6px">${b.qty}${b.unit}</span>
-      </div>
-      <span style="font-size:13px;font-weight:600;color:#d97706;margin-right:${adm?'8px':'0'}"${adm?` onclick="editBomRow(${b.id},'bom','${b.ingredient.replace(/'/g,"\\'")}',${b.qty},'${b.unit}',${Number(b.cost).toFixed(4)})" style="cursor:pointer"`:''}>$${Number(b.cost).toFixed(2)}</span>
-      ${adm ? `<button onclick="event.stopPropagation();delBomRow(${b.id},'bom')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 4px" title="刪除">✕</button>` : ''}
-    </div>`).join('');
-  const addBtn = adm ? `<button onclick="addBomRow('${p.name.replace(/'/g,"\\'")}')" style="width:100%;margin-top:8px;padding:8px;border:1px dashed #475569;border-radius:8px;background:transparent;color:#94a3b8;cursor:pointer;font-size:13px">＋ 新增配料</button>` : '';
+  const bomTable = (bom&&bom.length) ? `<div style="overflow-x:auto;margin-top:4px">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:2px solid var(--border);text-align:left">
+        <th style="padding:6px 8px;color:var(--text2);font-weight:500">配料</th>
+        <th style="padding:6px 8px;color:var(--text2);font-weight:500;text-align:right">用量</th>
+        <th style="padding:6px 8px;color:var(--text2);font-weight:500">單位</th>
+        <th style="padding:6px 8px;color:var(--text2);font-weight:500;text-align:right">成本</th>
+        ${adm?'<th style="padding:6px 4px;width:28px"></th>':''}
+      </tr></thead>
+      <tbody>${bom.map(b => `<tr id="bom-row-${b.id}" style="border-bottom:1px solid var(--border)${adm?';cursor:pointer':''}" ${adm?`onclick="editBomRow(${b.id},'bom','${b.ingredient.replace(/'/g,"\\'")}',${b.qty},'${b.unit}',${Number(b.cost).toFixed(4)})"`:''}>
+        <td style="padding:5px 8px">${b.ingredient}</td>
+        <td style="padding:5px 8px;text-align:right">${b.qty}</td>
+        <td style="padding:5px 8px;color:var(--text3)">${b.unit}</td>
+        <td style="padding:5px 8px;text-align:right;font-weight:600;color:var(--accent)">$${Number(b.cost).toFixed(2)}</td>
+        ${adm?`<td style="padding:5px 4px;text-align:center"><button onclick="event.stopPropagation();delBomRow(${b.id},'bom')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0" title="刪除">✕</button></td>`:''}
+      </tr>`).join('')}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--border)">
+        <td colspan="3" style="padding:5px 8px;font-weight:600">合計</td>
+        <td style="padding:5px 8px;text-align:right;font-weight:700;color:var(--accent)">$${bom.reduce((s,b)=>s+Number(b.cost),0).toFixed(2)}</td>
+        ${adm?'<td></td>':''}
+      </tr></tfoot>
+    </table></div>` : '';
+  const addBtn = adm ? `<button onclick="addBomRow('${p.name.replace(/'/g,"\\'")}')" style="width:100%;margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;background:transparent;color:var(--text3);cursor:pointer;font-size:13px">＋ 新增配料</button>` : '';
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-header">
       <div class="modal-title">${p.name}</div>
@@ -938,7 +954,7 @@ async function showProduct(idx) {
           <div class="stat-value green">$${margin.toFixed(2)}</div>
         </div>
       </div>
-      ${bomRows.length || adm ? `<div class="section-title" style="margin-top:12px">📋 BOM 配方明細</div>${bomRows}${addBtn}` : ''}
+      ${bomTable || adm ? `<div class="section-title" style="margin-top:12px">📋 BOM 配方明細</div>${bomTable}${addBtn}` : ''}
       ${adminBtns('product', idx)}
     </div>
   `;
@@ -977,17 +993,20 @@ async function addBomRow(productName) {
 }
 
 function editBomRow(id, table, curIng, curQty, curUnit, curCost) {
-  const container = document.getElementById('bom-row-' + id);
-  if (!container) return;
-  container.innerHTML = `
-    <div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0;align-items:center">
-      <input id="be_ing_${id}" value="${curIng}" placeholder="配料" style="flex:2;min-width:80px;padding:6px;border:1px solid #475569;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:13px">
-      <input id="be_qty_${id}" type="number" step="any" value="${curQty}" placeholder="用量" style="width:60px;padding:6px;border:1px solid #475569;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:13px;text-align:center">
-      <input id="be_unit_${id}" value="${curUnit}" placeholder="單位" style="width:36px;padding:6px;border:1px solid #475569;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:13px;text-align:center">
-      <input id="be_cost_${id}" type="number" step="any" value="${curCost}" placeholder="成本" style="width:65px;padding:6px;border:1px solid #475569;border-radius:6px;background:#1a1a2e;color:#e2e8f0;font-size:13px;text-align:center">
-      <button onclick="saveBomEdit(${id},'${table}')" style="padding:4px 10px;border:none;border-radius:6px;background:#d97706;color:#fff;cursor:pointer;font-size:12px;font-weight:600">存</button>
-      <button onclick="${table==='semi'?'showSemi(_showSemiIdx)':'showProduct(_showProductIdx)'}" style="padding:4px 8px;border:1px solid #475569;border-radius:6px;background:transparent;color:#94a3b8;cursor:pointer;font-size:12px">取消</button>
-    </div>`;
+  const row = document.getElementById('bom-row-' + id);
+  if (!row) return;
+  row.onclick = null;
+  const isSemi = table === 'semi';
+  const inputStyle = 'width:100%;padding:4px 6px;border:1px solid var(--accent);border-radius:4px;background:var(--surface2);color:var(--text);font-size:13px;box-sizing:border-box';
+  row.innerHTML = `
+    <td style="padding:4px 6px"><input id="be_ing_${id}" value="${curIng}" style="${inputStyle}"></td>
+    <td style="padding:4px 6px"><input id="be_qty_${id}" type="number" step="any" value="${curQty}" style="${inputStyle};text-align:right"></td>
+    ${isSemi ? '' : `<td style="padding:4px 6px"><input id="be_unit_${id}" value="${curUnit}" style="${inputStyle};width:40px"></td>`}
+    <td style="padding:4px 6px"><input id="be_cost_${id}" type="number" step="any" value="${curCost}" style="${inputStyle};text-align:right"></td>
+    <td style="padding:4px 4px;white-space:nowrap">
+      <button onclick="event.stopPropagation();saveBomEdit(${id},'${table}')" style="padding:3px 8px;border:none;border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;font-size:12px;font-weight:600">存</button>
+      <button onclick="event.stopPropagation();${isSemi?'showSemi(_showSemiIdx)':'showProduct(_showProductIdx)'}" style="padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text3);cursor:pointer;font-size:12px;margin-left:2px">取消</button>
+    </td>`;
   document.getElementById('be_ing_' + id).focus();
 }
 
@@ -1080,16 +1099,28 @@ async function showSemi(idx) {
   const s = SEMIS[idx];
   const {data: bom} = await db.from('cost_semi_bom').select('*').eq('semi_name', s.name).order('cost', {ascending: false});
   const adm = isAdmin();
-  const bomRows = (bom||[]).map(b => `
-    <div id="bom-row-${b.id}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1e293b${adm?';cursor:pointer':''}">
-      <div style="flex:1;min-width:0" ${adm?`onclick="editBomRow(${b.id},'semi','${b.ingredient.replace(/'/g,"\\'")}',${b.qty},'g',${Number(b.cost).toFixed(4)})"`:''}>
-        <span style="font-size:13px">${b.ingredient}</span>
-        <span style="font-size:11px;color:#64748b;margin-left:6px">${Number(b.qty).toFixed(0)}g</span>
-      </div>
-      <span style="font-size:13px;font-weight:600;color:#d97706;margin-right:${adm?'8px':'0'}">$${Number(b.cost).toFixed(2)}</span>
-      ${adm ? `<button onclick="event.stopPropagation();delBomRow(${b.id},'semi')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 4px" title="刪除">✕</button>` : ''}
-    </div>`).join('');
-  const addBtn = adm ? `<button onclick="addSemiBomRow('${s.name.replace(/'/g,"\\'")}')" style="width:100%;margin-top:8px;padding:8px;border:1px dashed #475569;border-radius:8px;background:transparent;color:#94a3b8;cursor:pointer;font-size:13px">＋ 新增配料</button>` : '';
+  const bomTable = (bom&&bom.length) ? `<div style="overflow-x:auto;margin-top:4px">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:2px solid var(--border);text-align:left">
+        <th style="padding:6px 8px;color:var(--text2);font-weight:500">配料</th>
+        <th style="padding:6px 8px;color:var(--text2);font-weight:500;text-align:right">用量(g)</th>
+        <th style="padding:6px 8px;color:var(--text2);font-weight:500;text-align:right">成本</th>
+        ${adm?'<th style="padding:6px 4px;width:28px"></th>':''}
+      </tr></thead>
+      <tbody>${bom.map(b => `<tr id="bom-row-${b.id}" style="border-bottom:1px solid var(--border)${adm?';cursor:pointer':''}" ${adm?`onclick="editBomRow(${b.id},'semi','${b.ingredient.replace(/'/g,"\\'")}',${b.qty},'g',${Number(b.cost).toFixed(4)})"`:''}>
+        <td style="padding:5px 8px">${b.ingredient}</td>
+        <td style="padding:5px 8px;text-align:right">${Number(b.qty).toFixed(0)}</td>
+        <td style="padding:5px 8px;text-align:right;font-weight:600;color:var(--accent)">$${Number(b.cost).toFixed(2)}</td>
+        ${adm?`<td style="padding:5px 4px;text-align:center"><button onclick="event.stopPropagation();delBomRow(${b.id},'semi')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0" title="刪除">✕</button></td>`:''}
+      </tr>`).join('')}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--border)">
+        <td style="padding:5px 8px;font-weight:600">合計</td>
+        <td style="padding:5px 8px;text-align:right;font-weight:600">${bom.reduce((s,b)=>s+Number(b.qty),0).toFixed(0)}</td>
+        <td style="padding:5px 8px;text-align:right;font-weight:700;color:var(--accent)">$${bom.reduce((s,b)=>s+Number(b.cost),0).toFixed(2)}</td>
+        ${adm?'<td></td>':''}
+      </tr></tfoot>
+    </table></div>` : '';
+  const addBtn = adm ? `<button onclick="addSemiBomRow('${s.name.replace(/'/g,"\\'")}')" style="width:100%;margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:8px;background:transparent;color:var(--text3);cursor:pointer;font-size:13px">＋ 新增配料</button>` : '';
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-header">
       <div class="modal-title">${s.name}</div>
@@ -1113,7 +1144,7 @@ async function showSemi(idx) {
       <div class="spec-row"><span class="spec-label">產出量</span><span class="spec-value">${s.yield_g}g</span></div>
       <div class="spec-row"><span class="spec-label">換算</span><span class="spec-value">${(s.yield_g/1000).toFixed(2)} kg</span></div>
       ${s.note ? `<div class="spec-row"><span class="spec-label">備註</span><span class="spec-value">${s.note}</span></div>` : ''}
-      ${bomRows.length || adm ? `<div class="section-title" style="margin-top:8px">📋 配方組成</div>${bomRows}${addBtn}` : ''}
+      ${bomTable || adm ? `<div class="section-title" style="margin-top:8px">📋 配方組成</div>${bomTable}${addBtn}` : ''}
       ${adminBtns('semi', idx)}
     </div>
   `;
@@ -1173,7 +1204,7 @@ function closeModal() {
 }
 
 // Init
-document.getElementById('updateDate').textContent = 'v20';
+document.getElementById('updateDate').textContent = 'v21';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
