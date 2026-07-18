@@ -516,6 +516,9 @@
 
 <div class="store-filter" id="storeFilter"></div>
 <div class="count-bar" id="countBar"></div>
+<div class="add-bar" id="addBar" style="display:none;padding:8px 16px;border-bottom:1px solid var(--border)">
+  <button id="addBtn" onclick="addItem()" style="width:100%;padding:9px;border:1.5px dashed var(--accent);border-radius:10px;background:transparent;color:var(--accent);cursor:pointer;font-size:14px;font-weight:600;font-family:inherit">＋ 新增</button>
+</div>
 <div class="list" id="listContainer"></div>
 <div id="pricingPanel" style="display:none"></div>
 
@@ -638,6 +641,13 @@ function renderStoreFilter() {
     </button>
   `).join('');
   sf.style.display = (currentTab === 'semis') ? 'none' : 'flex';
+  const addBar = document.getElementById('addBar');
+  const isPricing = currentTab === 'pricing';
+  addBar.style.display = (!isPricing && isAdmin()) ? '' : 'none';
+  if (!isPricing && isAdmin()) {
+    const labels = {products:'產品',materials:'食材',packaging:'包材',semis:'半成品'};
+    document.getElementById('addBtn').textContent = '＋ 新增' + (labels[currentTab]||'');
+  }
 }
 
 function setStore(s) {
@@ -1213,8 +1223,136 @@ function closeModal() {
   document.getElementById('modalOverlay').classList.remove('show');
 }
 
+function addItem() {
+  let fields, title, type;
+  if (currentTab === 'products') {
+    type = 'product'; title = '新增產品';
+    const cats = [...new Set(PRODUCTS.map(p => p.category))];
+    fields = [
+      {k:'name',l:'品名',v:''},
+      {k:'category',l:'分類',v:'',opts:cats},
+      {k:'store',l:'門店',v:'麻媽家',opts:['麻媽家','涼三伯']},
+      {k:'price',l:'售價',v:'',t:'number'},
+      {k:'cost',l:'成本',v:'0',t:'number'},
+      {k:'cost_pct',l:'成本率(%)',v:'0',t:'number',ro:true},
+    ];
+  } else if (currentTab === 'materials') {
+    type = 'material'; title = '新增食材';
+    const nextId = 'ING' + String(MATERIALS.length + 1).padStart(3, '0');
+    const cats = [...new Set(MATERIALS.map(m => m.category))];
+    fields = [
+      {k:'id',l:'編號',v:nextId},
+      {k:'name',l:'名稱',v:''},
+      {k:'spec',l:'規格（如 18kg/桶）',v:''},
+      {k:'price',l:'進貨單價',v:'',t:'number'},
+      {k:'unit_cost',l:'單位成本',v:'',t:'number'},
+      {k:'unit',l:'單位（g/ml/個）',v:'g',opts:['g','ml','個']},
+      {k:'category',l:'分類',v:'',opts:cats},
+      {k:'store',l:'門店',v:'ALL',opts:['ALL','麻媽家','涼三伯']},
+    ];
+  } else if (currentTab === 'packaging') {
+    type = 'packaging'; title = '新增包材';
+    const nextId = 'PKG' + String(PACKAGING.length + 1).padStart(3, '0');
+    fields = [
+      {k:'id',l:'編號',v:nextId},
+      {k:'name',l:'名稱',v:''},
+      {k:'spec',l:'規格',v:''},
+      {k:'price',l:'進貨單價（整箱）',v:'',t:'number'},
+      {k:'qty',l:'每箱數量',v:'',t:'number'},
+      {k:'unit_cost',l:'單位成本（每個）',v:'',t:'number'},
+      {k:'store',l:'門店',v:'ALL',opts:['ALL','麻媽家','涼三伯']},
+    ];
+  } else {
+    type = 'semi'; title = '新增半成品';
+    fields = [
+      {k:'name',l:'名稱',v:''},
+      {k:'total_cost',l:'總材料成本',v:'0',t:'number'},
+      {k:'yield_g',l:'產出量(g)',v:'',t:'number'},
+      {k:'unit_cost',l:'單位成本(每g)',v:'0',t:'number',ro:true},
+      {k:'note',l:'備註',v:''},
+    ];
+  }
+  const rows = fields.map(f => {
+    if (f.opts) {
+      const options = f.opts.map(o => `<option value="${o}" ${f.v===o?'selected':''}>${o}</option>`).join('');
+      return `<div style="margin-bottom:10px">
+        <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:2px">${f.l}</label>
+        <select id="af_${f.k}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box;font-family:inherit">
+          ${options}
+          <option value="">— 自訂 —</option>
+        </select>
+      </div>`;
+    }
+    return `<div style="margin-bottom:10px">
+      <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:2px">${f.l}</label>
+      <input id="af_${f.k}" value="${f.v}" type="${f.t||'text'}" step="any" ${f.ro?'readonly style="opacity:0.5"':''}
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:14px;box-sizing:border-box;font-family:inherit">
+    </div>`;
+  }).join('');
+
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header"><div class="modal-title">${title}</div></div>
+    <div class="modal-body">${rows}
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button onclick="closeModal()" style="padding:8px 20px;border-radius:8px;border:1px solid var(--border);color:var(--text2);background:transparent;cursor:pointer;font-family:inherit">取消</button>
+        <button onclick="saveNewItem('${type}')" style="padding:8px 20px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-weight:600;font-family:inherit">新增</button>
+      </div>
+    </div>`;
+  showModal();
+}
+
+async function saveNewItem(type) {
+  const get = k => {
+    const el = document.getElementById('af_'+k);
+    if (!el) return '';
+    if (el.tagName === 'SELECT') {
+      const v = el.value;
+      if (v === '') {
+        const custom = prompt(el.previousElementSibling?.textContent + '（自訂）：');
+        return custom || '';
+      }
+      return v;
+    }
+    return el.value;
+  };
+  let table, data;
+  if (type === 'product') {
+    const name = get('name').trim();
+    if (!name) { alert('請填品名'); return; }
+    const price = Number(get('price'))||0;
+    const cost = Number(get('cost'))||0;
+    const costPct = price > 0 ? Math.round(cost / price * 1000) / 10 : 0;
+    table = 'cost_products';
+    data = {name, category:get('category'), store:get('store'), price, cost, cost_pct:costPct};
+  } else if (type === 'material') {
+    const name = get('name').trim();
+    if (!name) { alert('請填名稱'); return; }
+    table = 'cost_materials';
+    data = {id:get('id').trim(), name, spec:get('spec'), price:Number(get('price'))||0, unit_cost:Number(get('unit_cost'))||0, unit:get('unit')||'g', category:get('category'), store:get('store')||'ALL'};
+  } else if (type === 'packaging') {
+    const name = get('name').trim();
+    if (!name) { alert('請填名稱'); return; }
+    table = 'cost_packaging';
+    data = {id:get('id').trim(), name, spec:get('spec'), price:Number(get('price'))||0, qty:Number(get('qty'))||1, unit_cost:Number(get('unit_cost'))||0, store:get('store')||'ALL'};
+  } else {
+    const name = get('name').trim();
+    if (!name) { alert('請填名稱'); return; }
+    const totalCost = Number(get('total_cost'))||0;
+    const yieldG = Number(get('yield_g'))||0;
+    const unitCost = yieldG > 0 ? totalCost / yieldG : 0;
+    table = 'cost_semis';
+    data = {name, total_cost:totalCost, yield_g:yieldG, unit_cost:Math.round(unitCost*1000000)/1000000, note:get('note')||null};
+  }
+  const {error} = await db.from(table).insert(data);
+  if (error) { alert('新增失敗: ' + error.message); return; }
+  await loadData();
+  closeModal();
+  renderStoreFilter();
+  renderList();
+}
+
 // Init
-document.getElementById('updateDate').textContent = 'v22';
+document.getElementById('updateDate').textContent = 'v23';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
