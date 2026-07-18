@@ -997,14 +997,43 @@ async function addBomRow(productName) {
   const qty = parseFloat(prompt('用量（g 或個數）：'));
   if (!qty || isNaN(qty)) return;
   const unit = prompt('單位（g/個/份/包）：', 'g') || 'g';
-  const cost = parseFloat(prompt('成本（元）：'));
-  if (!cost || isNaN(cost)) return;
+  const uc = lookupUnitCost(ingredient);
+  let cost;
+  if (uc !== null) {
+    cost = parseFloat((qty * uc).toFixed(4));
+    if (!confirm(`自動計算成本：$${cost}（單位成本 ${uc}）\n確認？`)) {
+      cost = parseFloat(prompt('手動輸入成本（元）：'));
+      if (!cost || isNaN(cost)) return;
+    }
+  } else {
+    cost = parseFloat(prompt('找不到食材庫單價，請手動輸入成本（元）：'));
+    if (!cost || isNaN(cost)) return;
+  }
   const {error} = await db.from('cost_bom').insert({product: productName, ingredient, qty, unit, cost, type: 'material'});
   if (error) { alert('新增失敗: ' + error.message); return; }
   await recalcProduct(productName);
   await loadData();
   _showProductIdx = PRODUCTS.findIndex(p => p.name === productName);
   if (_showProductIdx >= 0) showProduct(_showProductIdx);
+}
+
+function lookupUnitCost(ingName) {
+  const m = MATERIALS.find(x => x.name === ingName);
+  if (m) return m.unit_cost;
+  const s = SEMIS.find(x => x.name === ingName);
+  if (s) return s.unit_cost;
+  return null;
+}
+
+function bomAutoCalc(id) {
+  const ingEl = document.getElementById('be_ing_'+id);
+  const qtyEl = document.getElementById('be_qty_'+id);
+  const costEl = document.getElementById('be_cost_'+id);
+  if (!ingEl || !qtyEl || !costEl) return;
+  const uc = lookupUnitCost(ingEl.value.trim());
+  if (uc !== null) {
+    costEl.value = (parseFloat(qtyEl.value||0) * uc).toFixed(4);
+  }
 }
 
 function editBomRow(id, table, curIng, curQty, curUnit, curCost) {
@@ -1014,8 +1043,8 @@ function editBomRow(id, table, curIng, curQty, curUnit, curCost) {
   const isSemi = table === 'semi';
   const inputStyle = 'width:100%;padding:4px 6px;border:1px solid var(--accent);border-radius:4px;background:var(--surface2);color:var(--text);font-size:13px;box-sizing:border-box';
   row.innerHTML = `
-    <td style="padding:4px 6px"><input id="be_ing_${id}" value="${curIng}" style="${inputStyle}"></td>
-    <td style="padding:4px 6px"><input id="be_qty_${id}" type="number" step="any" value="${curQty}" style="${inputStyle};text-align:right"></td>
+    <td style="padding:4px 6px"><input id="be_ing_${id}" value="${curIng}" style="${inputStyle}" oninput="bomAutoCalc(${id})"></td>
+    <td style="padding:4px 6px"><input id="be_qty_${id}" type="number" step="any" value="${curQty}" style="${inputStyle};text-align:right" oninput="bomAutoCalc(${id})"></td>
     ${isSemi ? '' : `<td style="padding:4px 6px"><input id="be_unit_${id}" value="${curUnit}" style="${inputStyle};width:40px"></td>`}
     <td style="padding:4px 6px"><input id="be_cost_${id}" type="number" step="any" value="${curCost}" style="${inputStyle};text-align:right"></td>
     <td style="padding:4px 4px;white-space:nowrap">
@@ -1175,8 +1204,18 @@ async function addSemiBomRow(semiName) {
   if (!ingredient) return;
   const qty = parseFloat(prompt('用量（g）：'));
   if (!qty || isNaN(qty)) return;
-  const cost = parseFloat(prompt('成本（元）：'));
-  if (!cost || isNaN(cost)) return;
+  const uc = lookupUnitCost(ingredient);
+  let cost;
+  if (uc !== null) {
+    cost = parseFloat((qty * uc).toFixed(4));
+    if (!confirm(`自動計算成本：$${cost}（單位成本 ${uc}）\n確認？`)) {
+      cost = parseFloat(prompt('手動輸入成本（元）：'));
+      if (!cost || isNaN(cost)) return;
+    }
+  } else {
+    cost = parseFloat(prompt('找不到食材庫單價，請手動輸入成本（元）：'));
+    if (!cost || isNaN(cost)) return;
+  }
   const {error} = await db.from('cost_semi_bom').insert({semi_name: semiName, ingredient, qty, cost});
   if (error) { alert('新增失敗: ' + error.message); return; }
   await recalcSemi(semiName);
@@ -1352,7 +1391,7 @@ async function saveNewItem(type) {
 }
 
 // Init
-document.getElementById('updateDate').textContent = 'v23';
+document.getElementById('updateDate').textContent = 'v24';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
