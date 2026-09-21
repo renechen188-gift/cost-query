@@ -545,7 +545,7 @@ async function loadData() {
     db.from('cost_semis').select('*').order('name'),
     db.from('cost_products').select('*').order('category').order('name'),
   ]);
-  MATERIALS = (m.data || []).map(r => ({...r, price: Number(r.price), unit_cost: Number(r.unit_cost)}));
+  MATERIALS = (m.data || []).map(r => ({...r, price: Number(r.price), unit_cost: Number(r.unit_cost), yield_rate: Number(r.yield_rate ?? 1), cooked_unit_price: Number(r.cooked_unit_price ?? r.unit_cost)}));
   PACKAGING = (p.data || []).map(r => ({...r, price: Number(r.price), unit_cost: Number(r.unit_cost), qty: Number(r.qty)}));
   SEMIS = (s.data || []).map(r => ({...r, total_cost: Number(r.total_cost), yield_g: Number(r.yield_g), unit_cost: Number(r.unit_cost)}));
   PRODUCTS = (pr.data || []).map(r => ({...r, price: Number(r.price), cost: Number(r.cost), cost_pct: Number(r.cost_pct)}));
@@ -722,9 +722,13 @@ function renderList() {
               <span>${m.spec}</span>
             </div>
           </div>
+          <div class="item-right" style="min-width:56px">
+            <div class="item-cost-label">進價</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums">$${m.price}</div>
+          </div>
           <div class="item-right">
-            <div class="item-cost">${formatCost(m.unit_cost)}</div>
-            <div class="item-cost-label">元/${m.unit}</div>
+            <div class="item-cost">${formatCost(m.cooked_unit_price)}</div>
+            <div class="item-cost-label">元/${m.unit}${m.yield_rate !== 1 ? ` · 出成${Math.round(m.yield_rate*100)}%` : ''}</div>
           </div>
         </div>`;
       });
@@ -817,8 +821,10 @@ function editItem(type, idx) {
       {k:'id',l:'編號',v:item.id,ro:true},
       {k:'name',l:'名稱',v:item.name},
       {k:'spec',l:'規格',v:item.spec},
-      {k:'price',l:'進貨單價',v:item.price,t:'number'},
+      {k:'price',l:'進貨單價（改價後單位成本按比例自動換算，並連動半成品／產品成本）',v:item.price,t:'number'},
       {k:'unit_cost',l:'單位成本',v:item.unit_cost,t:'number'},
+      {k:'yield_rate',l:'出成率(0~1，預設1)',v:item.yield_rate,t:'number'},
+      {k:'cooked_unit_price',l:'熟料單價（自動計算）',v:formatCost(item.cooked_unit_price),ro:true},
       {k:'unit',l:'單位',v:item.unit},
       {k:'category',l:'分類',v:item.category},
       {k:'store',l:'門店',v:item.store},
@@ -862,7 +868,7 @@ function editItem(type, idx) {
 
 async function saveItem(type, idx) {
   const get = k => document.getElementById('ef_'+k)?.value;
-  let table, data, match;
+  let table, data, match, cascade = null;
   if (type === 'product') {
     table = 'cost_products';
     const item = PRODUCTS[idx];
@@ -873,8 +879,18 @@ async function saveItem(type, idx) {
     match = {id: item.id};
   } else if (type === 'material') {
     table = 'cost_materials';
-    data = {name:get('name'),spec:get('spec'),price:Number(get('price')),unit_cost:Number(get('unit_cost')),unit:get('unit'),category:get('category'),store:get('store')};
+    const item = MATERIALS[idx];
+    const newPrice = Number(get('price'));
+    let unitCost = Number(get('unit_cost'));
+    if (newPrice !== item.price && unitCost === item.unit_cost && item.price > 0) {
+      unitCost = Math.round(item.unit_cost * newPrice / item.price * 1e6) / 1e6;
+    }
+    const yieldRate = Number(get('yield_rate')) || 1;
+    data = {name:get('name'),spec:get('spec'),price:newPrice,unit_cost:unitCost,yield_rate:yieldRate,unit:get('unit'),category:get('category'),store:get('store')};
     match = {id: get('id')};
+    if (unitCost !== item.unit_cost || yieldRate !== item.yield_rate) {
+      cascade = {name: item.name, uc: unitCost / yieldRate};
+    }
   } else if (type === 'semi') {
     table = 'cost_semis';
     const item = SEMIS[idx];
@@ -887,9 +903,37 @@ async function saveItem(type, idx) {
   }
   const {error} = await db.from(table).update(data).eq('id', match.id);
   if (error) { alert('儲存失敗: ' + error.message); return; }
+  if (cascade) {
+    try { await cascadeIngredientCost(cascade.name, cascade.uc); }
+    catch (e) { alert('原料已儲存，但連帶更新半成品/產品成本時發生錯誤: ' + e.message); }
+  }
   await loadData();
   closeModal();
   renderList();
+}
+
+async function cascadeIngredientCost(ingName, unitCost, seen = new Set()) {
+  if (seen.has(ingName)) return;
+  seen.add(ingName);
+  const [sb, pb] = await Promise.all([
+    db.from('cost_semi_bom').select('id,semi_name,qty').eq('ingredient', ingName),
+    db.from('cost_bom').select('id,product,qty').eq('ingredient', ingName),
+  ]);
+  if (sb.error) throw sb.error;
+  if (pb.error) throw pb.error;
+  const round4 = v => Math.round(v * 10000) / 10000;
+  await Promise.all([
+    ...(sb.data||[]).map(r => db.from('cost_semi_bom').update({cost: round4(Number(r.qty) * unitCost)}).eq('id', r.id)),
+    ...(pb.data||[]).map(r => db.from('cost_bom').update({cost: round4(Number(r.qty) * unitCost)}).eq('id', r.id)),
+  ]);
+  for (const semiName of new Set((sb.data||[]).map(r => r.semi_name))) {
+    await recalcSemi(semiName);
+    const {data: s} = await db.from('cost_semis').select('unit_cost').eq('name', semiName).single();
+    if (s) await cascadeIngredientCost(semiName, Number(s.unit_cost), seen);
+  }
+  for (const prodName of new Set((pb.data||[]).map(r => r.product))) {
+    await recalcProduct(prodName);
+  }
 }
 
 async function deleteItem(type, idx) {
@@ -1019,7 +1063,7 @@ async function addBomRow(productName) {
 
 function lookupUnitCost(ingName) {
   const m = MATERIALS.find(x => x.name === ingName);
-  if (m) return m.unit_cost;
+  if (m) return m.cooked_unit_price;
   const s = SEMIS.find(x => x.name === ingName);
   if (s) return s.unit_cost;
   return null;
@@ -1129,6 +1173,16 @@ function showMaterial(idx) {
         <div class="stat-card">
           <div class="stat-label">進貨單價</div>
           <div class="stat-value">$${m.price}</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">出成率</div>
+          <div class="stat-value">${(m.yield_rate*100).toFixed(0)}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">熟料單價</div>
+          <div class="stat-value">$${formatCost(m.cooked_unit_price)}<small>/${m.unit}</small></div>
         </div>
       </div>
       <div class="section-title">規格資訊</div>
@@ -1285,6 +1339,7 @@ function addItem() {
       {k:'spec',l:'規格（如 18kg/桶）',v:''},
       {k:'price',l:'進貨單價',v:'',t:'number'},
       {k:'unit_cost',l:'單位成本',v:'',t:'number'},
+      {k:'yield_rate',l:'出成率(0~1，預設1)',v:'1',t:'number'},
       {k:'unit',l:'單位（g/ml/個）',v:'g',opts:['g','ml','個']},
       {k:'category',l:'分類',v:'',opts:cats},
       {k:'store',l:'門店',v:'ALL',opts:['ALL','麻媽家','涼三伯']},
@@ -1369,7 +1424,7 @@ async function saveNewItem(type) {
     const name = get('name').trim();
     if (!name) { alert('請填名稱'); return; }
     table = 'cost_materials';
-    data = {id:get('id').trim(), name, spec:get('spec'), price:Number(get('price'))||0, unit_cost:Number(get('unit_cost'))||0, unit:get('unit')||'g', category:get('category'), store:get('store')||'ALL'};
+    data = {id:get('id').trim(), name, spec:get('spec'), price:Number(get('price'))||0, unit_cost:Number(get('unit_cost'))||0, yield_rate:Number(get('yield_rate'))||1, unit:get('unit')||'g', category:get('category'), store:get('store')||'ALL'};
   } else if (type === 'packaging') {
     const name = get('name').trim();
     if (!name) { alert('請填名稱'); return; }
@@ -1393,7 +1448,7 @@ async function saveNewItem(type) {
 }
 
 // Init
-document.getElementById('updateDate').textContent = 'v25';
+document.getElementById('updateDate').textContent = 'v27';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
@@ -1436,7 +1491,7 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 
 // ── 帳密設定 ──────────────────────────────
 const USERS = {
-  'rene':  'rene888',
+  'rene':  'rene5888',
   'jerry': 'jerry888'
 };
 
