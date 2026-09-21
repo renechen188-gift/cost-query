@@ -722,7 +722,7 @@ function renderList() {
               <span>${m.spec}</span>
             </div>
           </div>
-          <div class="item-right" style="min-width:56px">
+          <div class="item-right" style="min-width:56px;margin-right:12px">
             <div class="item-cost-label">進價</div>
             <div style="font-size:14px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums">$${m.price}</div>
           </div>
@@ -746,6 +746,10 @@ function renderList() {
             <span class="item-tag">${p.id}</span>
             <span>${p.spec}</span>
           </div>
+        </div>
+        <div class="item-right" style="min-width:56px;margin-right:12px">
+          <div class="item-cost-label">進價(整箱)</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums">$${p.price}</div>
         </div>
         <div class="item-right">
           <div class="item-cost">${formatCost(p.unit_cost)}</div>
@@ -844,7 +848,7 @@ function editItem(type, idx) {
       {k:'id',l:'編號',v:item.id,ro:true},
       {k:'name',l:'名稱',v:item.name},
       {k:'spec',l:'規格',v:item.spec},
-      {k:'price',l:'進貨單價',v:item.price,t:'number'},
+      {k:'price',l:'進貨單價（整箱；改價或數量後單位成本自動換算，並連動產品成本）',v:item.price,t:'number'},
       {k:'qty',l:'每箱數量',v:item.qty,t:'number'},
       {k:'unit_cost',l:'單位成本',v:item.unit_cost,t:'number'},
       {k:'store',l:'門店',v:item.store},
@@ -898,8 +902,16 @@ async function saveItem(type, idx) {
     match = {id: item.id};
   } else {
     table = 'cost_packaging';
-    data = {name:get('name'),spec:get('spec'),price:Number(get('price')),qty:Number(get('qty')),unit_cost:Number(get('unit_cost')),store:get('store')};
+    const item = PACKAGING[idx];
+    const newPrice = Number(get('price'));
+    const newQty = Number(get('qty'));
+    let unitCost = Number(get('unit_cost'));
+    if (unitCost === item.unit_cost && (newPrice !== item.price || newQty !== item.qty) && newQty > 0) {
+      unitCost = Math.round(newPrice / newQty * 1e6) / 1e6;
+    }
+    data = {name:get('name'),spec:get('spec'),price:newPrice,qty:newQty,unit_cost:unitCost,store:get('store')};
     match = {id: get('id')};
+    if (unitCost !== item.unit_cost) cascade = {name: item.name, uc: unitCost};
   }
   const {error} = await db.from(table).update(data).eq('id', match.id);
   if (error) { alert('儲存失敗: ' + error.message); return; }
@@ -1448,7 +1460,7 @@ async function saveNewItem(type) {
 }
 
 // Init
-document.getElementById('updateDate').textContent = 'v27';
+document.getElementById('updateDate').textContent = 'v28';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
