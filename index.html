@@ -724,10 +724,10 @@ function renderList() {
           </div>
           <div class="item-right" style="min-width:56px;margin-right:12px">
             <div class="item-cost-label">進價</div>
-            <div style="font-size:14px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums">$${m.price}</div>
+            ${priceCell('material', idx, m.price)}
           </div>
           <div class="item-right">
-            <div class="item-cost">${formatCost(m.cooked_unit_price)}</div>
+            <div class="item-cost" id="uc_material_${idx}">${formatCost(m.cooked_unit_price)}</div>
             <div class="item-cost-label">元/${m.unit}${m.yield_rate !== 1 ? ` · 出成${Math.round(m.yield_rate*100)}%` : ''}</div>
           </div>
         </div>`;
@@ -749,10 +749,10 @@ function renderList() {
         </div>
         <div class="item-right" style="min-width:56px;margin-right:12px">
           <div class="item-cost-label">進價(整箱)</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums">$${p.price}</div>
+          ${priceCell('packaging', idx, p.price)}
         </div>
         <div class="item-right">
-          <div class="item-cost">${formatCost(p.unit_cost)}</div>
+          <div class="item-cost" id="uc_packaging_${idx}">${formatCost(p.unit_cost)}</div>
           <div class="item-cost-label">元/個</div>
         </div>
       </div>`;
@@ -781,6 +781,39 @@ function renderList() {
   }
 
   container.innerHTML = html;
+}
+
+function priceCell(type, idx, price) {
+  if (!isAdmin()) return `<div style="font-size:14px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums">$${price}</div>`;
+  return `<input type="number" step="any" min="0" value="${price}" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur()" onchange="quickPrice('${type}',${idx},this)" style="width:78px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:14px;font-weight:600;text-align:right;font-family:inherit;font-variant-numeric:tabular-nums">`;
+}
+
+async function quickPrice(type, idx, el) {
+  const isMat = type === 'material';
+  const item = (isMat ? MATERIALS : PACKAGING)[idx];
+  const newPrice = Number(el.value);
+  if (el.value === '' || isNaN(newPrice) || newPrice < 0 || newPrice === item.price) { el.value = item.price; return; }
+  const round6 = v => Math.round(v * 1e6) / 1e6;
+  let unitCost = item.unit_cost;
+  if (isMat && item.price > 0) unitCost = round6(item.unit_cost * newPrice / item.price);
+  if (!isMat && item.qty > 0) unitCost = round6(newPrice / item.qty);
+  el.disabled = true;
+  const {error} = await db.from(isMat ? 'cost_materials' : 'cost_packaging').update({price: newPrice, unit_cost: unitCost}).eq('id', item.id);
+  if (error) { alert('儲存失敗: ' + error.message); el.value = item.price; el.disabled = false; return; }
+  if (unitCost !== item.unit_cost) {
+    try { await cascadeIngredientCost(item.name, isMat ? unitCost / (item.yield_rate || 1) : unitCost); }
+    catch (e) { alert('進價已儲存，但連帶更新成本時發生錯誤: ' + e.message); }
+  } else {
+    alert('進價已儲存，但原進價或數量為 0，單位成本未自動換算，請進「編輯」手動調整單位成本。');
+  }
+  await loadData();
+  const updated = (isMat ? MATERIALS : PACKAGING)[idx];
+  const cell = document.getElementById(`uc_${type}_${idx}`);
+  if (cell) cell.textContent = formatCost(isMat ? updated.cooked_unit_price : updated.unit_cost);
+  el.value = updated.price;
+  el.disabled = false;
+  el.style.borderColor = '#2e7d56';
+  setTimeout(() => { el.style.borderColor = ''; }, 1500);
 }
 
 function toggleGroup(key) {
@@ -1460,7 +1493,7 @@ async function saveNewItem(type) {
 }
 
 // Init
-document.getElementById('updateDate').textContent = 'v28';
+document.getElementById('updateDate').textContent = 'v29';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
