@@ -981,15 +981,63 @@ async function cascadeIngredientCost(ingName, unitCost, seen = new Set()) {
   }
 }
 
+async function findBomUsage(type, name) {
+  const names = new Set();
+  let count = 0;
+  if (type === 'product') {
+    const {data} = await db.from('cost_bom').select('id').eq('product', name);
+    count = (data||[]).length;
+  } else {
+    const [pb, sb] = await Promise.all([
+      db.from('cost_bom').select('product').eq('ingredient', name),
+      db.from('cost_semi_bom').select('semi_name').eq('ingredient', name),
+    ]);
+    (pb.data||[]).forEach(r => { names.add(r.product); count++; });
+    (sb.data||[]).forEach(r => { names.add(r.semi_name); count++; });
+    if (type === 'semi') {
+      const {data} = await db.from('cost_semi_bom').select('id').eq('semi_name', name);
+      count += (data||[]).length;
+    }
+  }
+  return {count, names: [...names]};
+}
+
+async function cleanupBomReferences(type, name) {
+  if (type === 'product') {
+    await db.from('cost_bom').delete().eq('product', name);
+    return;
+  }
+  const [pb, sb] = await Promise.all([
+    db.from('cost_bom').select('product').eq('ingredient', name),
+    db.from('cost_semi_bom').select('semi_name').eq('ingredient', name),
+  ]);
+  const prods = new Set((pb.data||[]).map(r => r.product));
+  const semis = new Set((sb.data||[]).map(r => r.semi_name));
+  await db.from('cost_bom').delete().eq('ingredient', name);
+  await db.from('cost_semi_bom').delete().eq('ingredient', name);
+  if (type === 'semi') await db.from('cost_semi_bom').delete().eq('semi_name', name);
+  for (const p of prods) await recalcProduct(p);
+  for (const s of semis) await recalcSemi(s);
+}
+
 async function deleteItem(type, idx) {
-  if (!confirm('確定刪除此筆資料？')) return;
-  let table, id;
-  if (type === 'product') { table = 'cost_products'; id = PRODUCTS[idx].id; }
-  else if (type === 'material') { table = 'cost_materials'; id = MATERIALS[idx].id; }
-  else if (type === 'semi') { table = 'cost_semis'; id = SEMIS[idx].id; }
-  else { table = 'cost_packaging'; id = PACKAGING[idx].id; }
+  let name, table, id;
+  if (type === 'product') { name = PRODUCTS[idx].name; table = 'cost_products'; id = PRODUCTS[idx].id; }
+  else if (type === 'material') { name = MATERIALS[idx].name; table = 'cost_materials'; id = MATERIALS[idx].id; }
+  else if (type === 'semi') { name = SEMIS[idx].name; table = 'cost_semis'; id = SEMIS[idx].id; }
+  else { name = PACKAGING[idx].name; table = 'cost_packaging'; id = PACKAGING[idx].id; }
+
+  const usage = await findBomUsage(type, name);
+  let msg = '確定刪除此筆資料？';
+  if (usage.count > 0) {
+    const list = usage.names.slice(0, 5).join('、') + (usage.names.length > 5 ? ' 等' : '');
+    msg = `此品項還被用在 ${usage.count} 筆配方（${list}），刪除後會一併移除這些配方列並重算成本，無法復原。確定刪除？`;
+  }
+  if (!confirm(msg)) return;
+
   const {error} = await db.from(table).delete().eq('id', id);
   if (error) { alert('刪除失敗: ' + error.message); return; }
+  await cleanupBomReferences(type, name);
   await loadData();
   closeModal();
   renderList();
@@ -1493,7 +1541,7 @@ async function saveNewItem(type) {
 }
 
 // Init
-document.getElementById('updateDate').textContent = 'v29';
+document.getElementById('updateDate').textContent = 'v30';
 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
