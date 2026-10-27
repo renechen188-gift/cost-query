@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+<script>
+// 金額固定用 zh-TW 千分位（逗點），不跟著手機語系走（vi-VN 會變成 5.750）
+function fmtNum(n) { return new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 0 }).format(Number(n) || 0); }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>麻媽家．涼三伯｜成本查詢暨定價系統</title>
@@ -1669,7 +1673,7 @@ const PR = {
 };
 const PLATS = { uber: { n: 'UberEats', c: 33 }, panda: { n: 'Foodpanda', c: 31 }, custom: { n: '自訂', c: 33 } };
 
-function prFmt(n) { return '$' + Math.abs(Math.round(n)).toLocaleString(); }
+function prFmt(n) { return '$' + fmtNum(Math.abs(Math.round(n))); }
 
 function prCalc() {
   const price = Number(PR.sellingPrice)||0, cost = Number(PR.foodCost)||0;
